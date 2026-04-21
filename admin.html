@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+<title>JPSoft | Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f3;color:#1a1a1a;min-height:100vh;display:flex;align-items:center;justify-content:center}
+#loginWrap,#adminWrap{width:100%;max-width:480px;padding:1.5rem}
+.card{background:#fff;border-radius:12px;border:1px solid #e8e8e6;padding:2rem}
+h1{font-size:18px;font-weight:700;margin-bottom:4px}
+.sub{font-size:12px;color:#888;margin-bottom:1.5rem}
+label{font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px}
+input[type=password],input[type=text]{width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:14px;outline:none;margin-bottom:1rem;transition:border .15s}
+input:focus{border-color:#1a1a1a}
+.btn{width:100%;padding:11px;border-radius:8px;border:none;background:#1a1a1a;color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+.btn:hover{background:#333}
+.btn:disabled{background:#ccc;cursor:default}
+.btn-outline{background:#fff;color:#1a1a1a;border:1.5px solid #ddd;margin-top:8px}
+.btn-outline:hover{background:#f5f5f3;border-color:#888}
+.error{font-size:12px;color:#dc2626;margin-top:-8px;margin-bottom:12px}
+#adminWrap{max-width:600px}
+.upload-zone{border:2px dashed #ccc;border-radius:10px;padding:2rem;text-align:center;cursor:pointer;margin-bottom:1rem;transition:background .15s;background:#fff}
+.upload-zone:hover{background:#f0f0ee}
+.upload-zone.loaded{border-style:solid;border-color:#4caf50;background:#f0faf0}
+.upload-label{font-size:13px;color:#555}
+.upload-label strong{color:#1a1a1a}
+.status-box{background:#f5f5f3;border-radius:8px;padding:12px 16px;margin-top:1rem;font-size:12px;color:#555;line-height:1.7}
+.status-box b{color:#1a1a1a}
+.badge-ok{display:inline-block;background:#d1fae5;color:#065f46;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
+.badge-err{display:inline-block;background:#fee2e2;color:#991b1b;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
+.progress{height:4px;background:#eee;border-radius:2px;margin:8px 0;overflow:hidden}
+.progress-bar{height:4px;background:#1a1a1a;border-radius:2px;width:0;transition:width .3s}
+.logout{font-size:11px;color:#aaa;cursor:pointer;text-align:right;margin-bottom:12px}
+.logout:hover{color:#dc2626}
+table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
+th{font-size:10px;font-weight:600;color:#aaa;text-align:left;padding:5px 8px;border-bottom:1px solid #eee;background:#fafaf8}
+td{padding:5px 8px;border-bottom:1px solid #f0f0ee;color:#1a1a1a}
+tr:last-child td{border-bottom:none}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginWrap">
+  <div class="card">
+    <h1>JPSoft | Administración</h1>
+    <div class="sub">Ingresá tu contraseña para continuar</div>
+    <label>Contraseña</label>
+    <input type="password" id="pwdInput" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="error" id="loginError" style="display:none">Contraseña incorrecta.</div>
+    <button class="btn" onclick="doLogin()">Ingresar</button>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="adminWrap" style="display:none">
+  <div class="logout" onclick="doLogout()">✕ Cerrar sesión</div>
+  <div class="card">
+    <h1>Actualizar listas de precios</h1>
+    <div class="sub">Cargá el Excel con las hojas de proveedores</div>
+
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+      <div style="font-size:28px;margin-bottom:8px">📂</div>
+      <div class="upload-label"><strong>Hacé clic o arrastrá tu archivo Excel</strong></div>
+      <div class="upload-label" style="margin-top:4px;font-size:11px">Soporta .xlsx con múltiples hojas de proveedores</div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none">
+    </div>
+
+    <div id="preview" style="display:none">
+      <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+      <div class="status-box" id="statusBox"></div>
+      <button class="btn" id="uploadBtn" onclick="subirAFirebase()" style="margin-top:1rem">Publicar precios</button>
+      <button class="btn btn-outline" onclick="resetUpload()">Cancelar</button>
+    </div>
+
+    <div id="lastUpdate" style="display:none;margin-top:1rem">
+      <div class="status-box" id="lastUpdateBox"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getDatabase, ref, set, get } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+// ── Configuración Firebase ──
+const FIREBASE_URL = 'https://jpsoft---gestor-default-rtdb.firebaseio.com';
+const ADMIN_PWD    = 'jpsoft2026';  // ← cambiá esta contraseña
+
+const app = initializeApp({ databaseURL: FIREBASE_URL });
+const db  = getDatabase(app);
+
+// ── Login ──
+window.doLogin = function(){
+  const pwd = document.getElementById('pwdInput').value;
+  if(pwd === ADMIN_PWD){
+    document.getElementById('loginWrap').style.display = 'none';
+    document.getElementById('adminWrap').style.display = 'block';
+    cargarUltimaActualizacion();
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+  }
+};
+
+window.doLogout = function(){
+  document.getElementById('loginWrap').style.display = 'flex';
+  document.getElementById('adminWrap').style.display = 'none';
+  document.getElementById('pwdInput').value = '';
+};
+
+// ── Parseo Excel ──
+let parsedData = null;
+
+function normHeader(s){
+  return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
+}
+function norm(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+}
+function safeCode(val){
+  if(val===null||val===undefined||val==='') return '';
+  if(typeof val==='string') return val.trim();
+  if(typeof val==='number') return val.toFixed(0);
+  return String(val).trim();
+}
+function detectUnit(desc){
+  const d=desc.toLowerCase();
+  if(/(x\s*\d+\s*kg|\d+\s*kg|\d+\s*kilo)/.test(d)) return 'unit';
+  if(/(-\s*kg\b|x\s*kg\b|\bpor\s*kg\b|\/kg\b|\(x\s*kg|\bprecio\s*kg)/.test(d)) return 'kg';
+  if(/(\bx\s*100\s*g\b|\bpor\s*100\s*g|\/100\s*g|\bcada\s*100\s*g)/.test(d)) return '100g';
+  return 'unit';
+}
+function detectSheetConfig(rows){
+  let ganancia=null,colLista=-1,colSugerido=-1,colCod=-1,colDesc=-1,headerRow=-1;
+  for(let i=0;i<Math.min(rows.length,10);i++){
+    const r=rows[i].map(c=>normHeader(c));
+    if(ganancia===null){
+      r.forEach((c,j)=>{
+        if(c.includes('GANANCIA')){
+          for(let k=j+1;k<r.length;k++){const v=parseFloat(rows[i][k]);if(!isNaN(v)&&v>0&&v<=5)ganancia=v;}
+          if(ganancia===null&&i+1<rows.length){for(let k=0;k<rows[i+1].length;k++){const v=parseFloat(rows[i+1][k]);if(!isNaN(v)&&v>0&&v<=5)ganancia=v;}}
+        }
+      });
+    }
+    const hasDesc=r.some(c=>c.includes('DESC')||c.includes('NOMBRE'));
+    const hasLista=r.some(c=>c.includes('LISTA')&&!c.includes('SUGERIDO'));
+    if(hasDesc&&hasLista){
+      headerRow=i;
+      r.forEach((c,idx)=>{
+        if(colCod<0&&(c.includes('COD')||c==='#')) colCod=idx;
+        if(colDesc<0&&(c.includes('DESC')||c.includes('NOMBRE'))) colDesc=idx;
+        if(colLista<0&&c.includes('LISTA')&&!c.includes('SUGERIDO')) colLista=idx;
+        if(colSugerido<0&&c.includes('SUGERIDO')) colSugerido=idx;
+      });
+      break;
+    }
+  }
+  if(ganancia===null){
+    for(let i=0;i<Math.min(rows.length,5);i++){
+      const r=rows[i];
+      const hasP=r.some(c=>normHeader(c).includes('LISTA')||normHeader(c).includes('SUGERIDO'));
+      if(hasP){for(let j=0;j<r.length;j++){const v=parseFloat(r[j]);if(!isNaN(v)&&v>0&&v<=5){ganancia=v;break;}}}
+      if(ganancia!==null) break;
+    }
+  }
+  return{headerRow,colCod,colDesc,colLista,colSugerido,hasSugerido:colSugerido>=0,ganancia};
+}
+
+function parseExcel(arrayBuffer){
+  const wb = XLSX.read(arrayBuffer, {type:'array'});
+  const allProducts = [];
+  const gananciaMap = {};
+  const useSugeridoMap = {};
+  const resumen = [];
+
+  wb.SheetNames.forEach(sheetName => {
+    const ws = wb.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true,blankrows:false});
+    const rowsText = XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false,blankrows:false});
+    const {headerRow,colCod,colDesc,colLista,colSugerido,hasSugerido,ganancia} = detectSheetConfig(rows);
+    if(headerRow<0||colDesc<0||colLista<0){ resumen.push({hoja:sheetName,prods:0,error:'No se detectó estructura'}); return; }
+    const useDir = hasSugerido&&ganancia===null&&colSugerido>=0;
+    gananciaMap[sheetName] = ganancia!==null?ganancia:(useDir?null:0.5);
+    useSugeridoMap[sheetName] = useDir;
+    let count = 0;
+    for(let i=headerRow+1;i<rows.length;i++){
+      const row=rows[i], rowT=rowsText[i]||[];
+      const desc=String(row[colDesc]||'').trim();
+      const lista=parseFloat(row[colLista]);
+      if(!desc||desc.length<3||isNaN(lista)||lista<=0) continue;
+      const codRaw=colCod>=0?row[colCod]:'';
+      const codText=colCod>=0?(rowT[colCod]||''):'';
+      const cod=codText?String(codText).trim():safeCode(codRaw);
+      const sugerido=colSugerido>=0?parseFloat(row[colSugerido]):NaN;
+      const unit=detectUnit(desc);
+      allProducts.push({
+        key:sheetName+'||'+i+'||'+desc,
+        proveedor:sheetName,cod,desc,lista,
+        sugerido:isNaN(sugerido)?null:sugerido,
+        normDesc:norm(desc),normCod:norm(String(cod)),unit
+      });
+      count++;
+    }
+    resumen.push({hoja:sheetName, prods:count, ganancia:gananciaMap[sheetName], useDir});
+  });
+
+  return {allProducts, gananciaMap, useSugeridoMap, resumen};
+}
+
+// ── UI carga archivo ──
+window.resetUpload = function(){
+  document.getElementById('preview').style.display='none';
+  document.getElementById('uploadZone').classList.remove('loaded');
+  document.getElementById('fileInput').value='';
+  parsedData = null;
+};
+
+document.getElementById('fileInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      parsedData = parseExcel(ev.target.result);
+      const {resumen, allProducts} = parsedData;
+      document.getElementById('uploadZone').classList.add('loaded');
+      document.getElementById('uploadZone').querySelector('.upload-label').innerHTML =
+        `<strong>${file.name}</strong> — ${allProducts.length.toLocaleString()} productos`;
+
+      let html = `<b>Resumen de lectura:</b><br>`;
+      html += `<table><tr><th>Proveedor</th><th>Productos</th><th>Ganancia</th><th>Estado</th></tr>`;
+      resumen.forEach(r => {
+        const gan = r.useDir ? 'P. Sugerido' : (r.ganancia != null ? Math.round(r.ganancia*100)+'%' : '50%');
+        const est = r.error ? `<span class="badge-err">${r.error}</span>` : `<span class="badge-ok">OK</span>`;
+        html += `<tr><td>${r.hoja}</td><td>${r.prods}</td><td>${gan}</td><td>${est}</td></tr>`;
+      });
+      html += '</table>';
+      document.getElementById('statusBox').innerHTML = html;
+      document.getElementById('preview').style.display = 'block';
+    } catch(err) {
+      alert('Error leyendo el archivo: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e=>{e.preventDefault();zone.style.background='#f0f0ee';});
+zone.addEventListener('dragleave', ()=>{zone.style.background='';});
+zone.addEventListener('drop', e=>{
+  e.preventDefault();zone.style.background='';
+  if(e.dataTransfer.files[0]) document.getElementById('fileInput').files = e.dataTransfer.files;
+  document.getElementById('fileInput').dispatchEvent(new Event('change'));
+});
+
+// ── Subir a Firebase ──
+window.subirAFirebase = async function(){
+  if(!parsedData) return;
+  const btn = document.getElementById('uploadBtn');
+  const bar = document.getElementById('progressBar');
+  btn.disabled = true;
+  btn.textContent = 'Publicando...';
+  bar.style.width = '30%';
+
+  try {
+    const payload = {
+      products:      parsedData.allProducts,
+      gananciaMap:   parsedData.gananciaMap,
+      useSugeridoMap:parsedData.useSugeridoMap,
+      updatedAt:     new Date().toLocaleString('es-AR'),
+      totalProducts: parsedData.allProducts.length,
+      proveedores:   [...new Set(parsedData.allProducts.map(p=>p.proveedor))]
+    };
+    bar.style.width = '60%';
+    await set(ref(db, 'gestor'), payload);
+    bar.style.width = '100%';
+    btn.textContent = '✓ Publicado exitosamente';
+    btn.style.background = '#16a34a';
+    document.getElementById('statusBox').innerHTML +=
+      `<br><br><b>✓ Publicado el ${payload.updatedAt}</b> — ${payload.totalProducts.toLocaleString()} productos disponibles para el cliente.`;
+    cargarUltimaActualizacion();
+  } catch(err) {
+    btn.disabled = false;
+    btn.textContent = 'Publicar precios';
+    bar.style.width = '0';
+    alert('Error al subir a Firebase: ' + err.message);
+  }
+};
+
+// ── Última actualización ──
+async function cargarUltimaActualizacion(){
+  try {
+    const snap = await get(ref(db, 'gestor/updatedAt'));
+    const total = await get(ref(db, 'gestor/totalProducts'));
+    if(snap.exists()){
+      document.getElementById('lastUpdateBox').innerHTML =
+        `<b>Última publicación:</b> ${snap.val()} — ${(total.val()||0).toLocaleString()} productos en línea`;
+      document.getElementById('lastUpdate').style.display = 'block';
+    }
+  } catch(e){}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+<title>JPSoft | Gestor</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f3;color:#1a1a1a;min-height:100vh}
+#main{padding:1.5rem;max-width:1100px;margin:0 auto}
+.header{margin-bottom:1.2rem}
+.header h1{font-size:20px;font-weight:750;color:#1a1a1a}
+.header h2{font-size:15px;font-weight:550;color:#1a1a1a}
+.header h3{font-size:15px;font-weight:550;color:#1a1a1a}
+
+/* Loading */
+#loadingScreen{text-align:center;padding:4rem 2rem}
+.spinner{width:36px;height:36px;border:3px solid #eee;border-top-color:#1a1a1a;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 1rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:14px;color:#888}
+.error-box{background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;padding:1.5rem;text-align:center;color:#991b1b;margin-top:1rem}
+
+.update-badge{display:inline-block;font-size:11px;padding:3px 10px;border-radius:20px;background:#d1fae5;color:#065f46;font-weight:500;margin-left:8px;vertical-align:middle}
+
+.top-controls{display:grid;grid-template-columns:1fr 260px;gap:12px;margin-bottom:10px;align-items:start}
+.search-wrap{position:relative}
+.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:20px;color:#aaa;pointer-events:none}
+.search-wrap input{width:100%;padding:14px 16px 14px 46px;border:2px solid #ddd;border-radius:12px;font-size:18px;background:#fff;outline:none;transition:border .15s;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.search-wrap input:focus{border-color:#1a1a1a;box-shadow:0 2px 12px rgba(0,0,0,.1)}
+.search-hint{font-size:10px;color:#aaa;margin-top:4px}
+.search-hint span{background:#eee;border-radius:3px;padding:1px 5px;margin-right:3px;font-family:monospace;font-size:15px}
+
+.gan-panel{background:#fff;border-radius:8px;padding:10px 14px;border:1px solid #e8e8e6}
+.gan-panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.gan-panel-title{font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.05em}
+.gan-lock-btn{font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid #ddd;background:#fff;cursor:pointer;color:#555;transition:all .15s;display:flex;align-items:center;gap:4px;font-weight:500}
+.gan-lock-btn:hover{border-color:#888}
+.gan-lock-btn.locked{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.gan-panel.locked .gan-row input[type=range]{pointer-events:none;opacity:.35}
+.gan-panel.locked .gan-val{opacity:.5}
+.gan-row{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.gan-row:last-child{margin-bottom:0}
+.gan-name{font-size:10px;color:#777;width:88px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gan-row input[type=range]{flex:1;min-width:0;accent-color:#555}
+.gan-val{font-size:11px;font-weight:600;color:#1a1a1a;width:32px;text-align:right;flex-shrink:0}
+
+.filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+.filter-btn{font-size:13px;padding:7px 16px;border-radius:20px;border:1.5px solid #ccc;background:#fff;color:#555;cursor:pointer;transition:all .15s;font-weight:500}
+.filter-btn:hover{border-color:#888;color:#1a1a1a}
+.filter-btn.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+
+.stats-row{display:flex;gap:8px;margin-bottom:10px}
+.stat{background:#fff;border:1px solid #e8e8e6;border-radius:8px;padding:8px 12px;flex:1}
+.stat-n{font-size:17px;font-weight:600;color:#1a1a1a}
+.stat-l{font-size:10px;color:#aaa;margin-top:1px}
+
+.table-wrap{overflow-x:auto;background:#fff;border:1px solid #e8e8e6;border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{font-size:10px;font-weight:600;color:#aaa;text-align:left;padding:7px 10px;border-bottom:1px solid #eee;background:#fafaf8;white-space:nowrap}
+th.num{text-align:right}
+td{padding:7px 10px;border-bottom:1px solid #f0f0ee;color:#1a1a1a;vertical-align:middle}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+td.desc{max-width:220px;line-height:1.3}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafaf8}
+
+.badge{display:inline-block;font-size:10px;padding:2px 6px;border-radius:20px;font-weight:600}
+.b0{background:#dbeafe;color:#1e40af}.b1{background:#d1fae5;color:#065f46}
+.b2{background:#fef3c7;color:#92400e}.b3{background:#fee2e2;color:#991b1b}
+.b4{background:#ede9fe;color:#4c1d95}.b5{background:#dcfce7;color:#14532d}
+.b6{background:#fce7f3;color:#831843}
+.cod-cell{font-size:11px;color:#888;font-family:monospace;max-width:130px;word-break:break-all}
+.p-lista{color:#bbb}
+.p-venta{font-weight:700;font-size:24px;color:#1a1a1a}
+.p-diff{font-size:10px;color:#16a34a}
+mark{background:#fef08a;color:#713f12;border-radius:2px;padding:0 1px}
+
+.empty{text-align:center;padding:2.5rem;color:#aaa;font-size:13px}
+.pagination{display:flex;align-items:center;gap:8px;justify-content:center;padding:.8rem 0}
+.page-btn{font-size:11px;padding:4px 12px;border-radius:7px;border:1px solid #ccc;background:#fff;cursor:pointer;color:#333}
+.page-btn:hover:not(:disabled){background:#f0f0ee}
+.page-btn:disabled{opacity:.35;cursor:default}
+.page-info{font-size:11px;color:#aaa}
+</style>
+</head>
+<body>
+<div id="main">
+  <div class="header">
+    <h1>JPSoft | Gestor de precios y proveedores</h1>
+    <h2>Joaquín Pedemonte | Servicios Informáticos</h2>
+    <h3>WhatsApp: 3436615390</h3>
+  </div>
+
+  <!-- Pantalla de carga -->
+  <div id="loadingScreen">
+    <div class="spinner"></div>
+    <div class="loading-text">Cargando precios actualizados...</div>
+  </div>
+
+  <!-- Contenido principal (oculto hasta que carguen los datos) -->
+  <div id="mainUI" style="display:none">
+    <div class="top-controls">
+      <div>
+        <div class="search-wrap" style="margin-bottom:4px">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" placeholder="Buscar producto: harina avena, arandano, 7798348231769..." oninput="applyFilters()">
+        </div>
+        <div class="search-hint">
+          <span>palabras en cualquier orden</span>
+          <span>sin tildes</span>
+          <span>código parcial</span>
+        </div>
+      </div>
+      <div class="gan-panel" id="ganPanel">
+        <div class="gan-panel-header">
+          <div class="gan-panel-title">Ganancia por proveedor</div>
+          <button class="gan-lock-btn locked" id="ganLockBtn" onclick="toggleGananciaLock()" title="Bloquear/desbloquear">🔒 Bloqueado</button>
+        </div>
+        <div id="gananciasContainer"></div>
+      </div>
+    </div>
+
+    <div class="filters" id="filtersRow"></div>
+
+    <div class="stats-row">
+      <div class="stat"><div class="stat-n" id="statTotal">0</div><div class="stat-l">productos encontrados</div></div>
+      <div class="stat"><div class="stat-n" id="statProv">0</div><div class="stat-l">proveedores</div></div>
+      <div class="stat" id="statUpdateWrap" style="display:none"><div class="stat-n" style="font-size:12px" id="statUpdate"></div><div class="stat-l">última actualización</div></div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Proveedor</th>
+            <th>Código</th>
+            <th class="desc">Producto</th>
+            <th class="num">P. Lista</th>
+            <th class="num">P. Venta</th>
+            <th class="num">Ganancia</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <div id="emptyMsg" class="empty" style="display:none">No se encontraron productos. Probá con menos palabras.</div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getDatabase, ref, get } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+const FIREBASE_URL = 'https://jpsoft---gestor-default-rtdb.firebaseio.com';
+const app = initializeApp({ databaseURL: FIREBASE_URL });
+const db  = getDatabase(app);
+
+let allProducts=[], filtered=[], activeFilter='Todos', page=1;
+const PAGE_SIZE=50, gananciaMap={}, useSugeridoMap={}, provColorMap={};
+const BADGE_COLORS=['b0','b1','b2','b3','b4','b5','b6'];
+
+function badgeClass(n){
+  if(!(n in provColorMap)) provColorMap[n]=BADGE_COLORS[Object.keys(provColorMap).length%BADGE_COLORS.length];
+  return provColorMap[n];
+}
+function norm(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+}
+function matchQuery(h,words){return words.every(w=>h.includes(w));}
+function highlight(text,words){
+  if(!words.length) return text;
+  let r=text;
+  words.forEach(w=>{
+    if(!w) return;
+    const e=w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    r=r.replace(new RegExp(e,'gi'),m=>`<mark>${m}</mark>`);
+  });
+  return r;
+}
+function fmt(n){return '$'+Math.round(n).toLocaleString('es-AR');}
+function getPrecioVenta(p){
+  if(useSugeridoMap[p.proveedor]&&p.sugerido) return p.sugerido;
+  return p.lista*(1+(gananciaMap[p.proveedor]||0));
+}
+
+// ── Cargar desde Firebase ──
+async function cargarDesdeFirebase(){
+  try {
+    const snap = await get(ref(db, 'gestor'));
+    if(!snap.exists()){
+      mostrarError('No hay datos disponibles. El administrador debe publicar las listas primero.');
+      return;
+    }
+    const data = snap.val();
+    allProducts = data.products || [];
+    Object.assign(gananciaMap, data.gananciaMap||{});
+    Object.assign(useSugeridoMap, data.useSugeridoMap||{});
+
+    // Mostrar fecha de actualización
+    if(data.updatedAt){
+      document.getElementById('statUpdate').textContent = data.updatedAt;
+      document.getElementById('statUpdateWrap').style.display = 'block';
+    }
+
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('mainUI').style.display = 'block';
+    buildGananciasPanel();
+    buildFilters();
+    applyFilters();
+
+  } catch(err){
+    mostrarError('Error al conectar con el servidor. Verificá tu conexión a internet.<br><small>'+err.message+'</small>');
+  }
+}
+
+function mostrarError(msg){
+  document.getElementById('loadingScreen').innerHTML =
+    `<div class="error-box">⚠️ ${msg}</div>`;
+}
+
+// ── UI ──
+function buildGananciasPanel(){
+  const c=document.getElementById('gananciasContainer');
+  c.innerHTML='';
+  Object.keys(gananciaMap).forEach(prov=>{
+    const g=gananciaMap[prov],useDir=useSugeridoMap[prov];
+    const id='gan_'+prov.replace(/\W+/g,'_');
+    if(useDir){c.innerHTML+=`<div class="gan-row" style="opacity:.6"><span class="gan-name" title="${prov}">${prov}</span><span style="font-size:10px;color:#aaa;font-style:italic">P. Sugerido</span></div>`;return;}
+    const val=Math.round((g||0.5)*100);
+    c.innerHTML+=`<div class="gan-row"><span class="gan-name" title="${prov}">${prov}</span><input type="range" id="${id}" min="0" max="100" step="1" value="${val}" oninput="updateGanancia('${prov}',this.value,'${id}_val')"><span class="gan-val" id="${id}_val">${val}%</span></div>`;
+  });
+  document.getElementById('ganPanel').classList.add('locked');
+}
+
+window.updateGanancia = function(prov,val,valId){
+  gananciaMap[prov]=parseInt(val)/100;
+  document.getElementById(valId).textContent=parseInt(val)+'%';
+  renderTable();
+};
+
+function buildFilters(){
+  const provs=[...new Set(allProducts.map(p=>p.proveedor))];
+  document.getElementById('statProv').textContent=provs.length;
+  const row=document.getElementById('filtersRow');
+  row.innerHTML='';
+  ['Todos',...provs].forEach(name=>{
+    const btn=document.createElement('button');
+    btn.className='filter-btn'+(name===activeFilter?' active':'');
+    btn.textContent=name;
+    btn.onclick=()=>{activeFilter=name;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');page=1;applyFilters();};
+    row.appendChild(btn);
+  });
+}
+
+window.applyFilters = function(){
+  const raw=document.getElementById('searchInput').value;
+  const words=norm(raw).split(' ').filter(Boolean);
+  filtered=allProducts.filter(p=>{
+    const mp=activeFilter==='Todos'||p.proveedor===activeFilter;
+    if(!mp) return false;
+    if(!words.length) return true;
+    return matchQuery(p.normDesc,words)||matchQuery(p.normCod,words);
+  });
+  page=1;
+  document.getElementById('statTotal').textContent=filtered.length.toLocaleString();
+  renderTable();
+};
+
+function renderTable(){
+  const tbody=document.getElementById('tableBody');
+  const empty=document.getElementById('emptyMsg');
+  const raw=document.getElementById('searchInput').value;
+  const words=norm(raw).split(' ').filter(Boolean);
+  const totalPages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));
+  if(page>totalPages) page=totalPages;
+  const slice=filtered.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
+  if(!slice.length){tbody.innerHTML='';empty.style.display='block';}
+  else{
+    empty.style.display='none';
+    tbody.innerHTML=slice.map(p=>{
+      const venta=getPrecioVenta(p);
+      const diff=venta-p.lista;
+      const descHL=words.length?highlight(p.desc,words):p.desc;
+      let unitBadge='';
+      if(p.unit==='kg') unitBadge=`<span class="unit-badge unit-kg">x kg</span>`;
+      else if(p.unit==='100g') unitBadge=`<span class="unit-badge unit-100g">x 100g</span>`;
+      let precioLabel=fmt(venta);
+      if(p.unit==='kg') precioLabel=fmt(venta)+`<span style="font-size:9px;color:#aaa;font-weight:400">/kg</span>`;
+      else if(p.unit==='100g') precioLabel=fmt(venta)+`<span style="font-size:9px;color:#aaa;font-weight:400">/100g</span>`;
+      return `<tr>
+        <td><span class="badge ${badgeClass(p.proveedor)}">${p.proveedor}</span></td>
+        <td class="cod-cell">${p.cod||'—'}</td>
+        <td class="desc">${descHL}${unitBadge}</td>
+        <td class="num p-lista">${fmt(p.lista)}</td>
+        <td class="num p-venta">${precioLabel}</td>
+        <td class="num p-diff">+${fmt(diff)}</td>
+      </tr>`;
+    }).join('');
+  }
+  renderPagination(totalPages);
+}
+
+function renderPagination(totalPages){
+  const pg=document.getElementById('pagination');
+  if(totalPages<=1){pg.innerHTML='';return;}
+  pg.innerHTML=`<button class="page-btn" onclick="changePage(-1)" ${page<=1?'disabled':''}>← Anterior</button><span class="page-info">Página ${page} de ${totalPages}</span><button class="page-btn" onclick="changePage(1)" ${page>=totalPages?'disabled':''}>Siguiente →</button>`;
+}
+window.changePage = function(dir){page+=dir;renderTable();}
+
+window.toggleGananciaLock = function(){
+  const locked = document.getElementById('ganPanel').classList.toggle('locked');
+  const btn = document.getElementById('ganLockBtn');
+  btn.classList.toggle('locked', locked);
+  btn.innerHTML = locked ? '🔒 Bloqueado' : '🔓 Libre';
+};
+
+// ── Lector de códigos ──
+let scanBuffer='', lastKeyTime=0;
+const SCAN_SPEED=60;
+document.addEventListener('keydown',e=>{
+  const now=Date.now();
+  const input=document.getElementById('searchInput');
+  if(!input) return;
+  if(document.activeElement===input){
+    if(e.key==='Enter'){const val=input.value.trim();if(/^\d+$/.test(val)){e.preventDefault();applyFilters();}}
+    return;
+  }
+  const gap=now-lastKeyTime; lastKeyTime=now;
+  if(e.key==='Enter'){
+    if(scanBuffer.length>=4){input.value=scanBuffer;applyFilters();input.focus();}
+    scanBuffer=''; return;
+  }
+  if(e.key.length===1){if(gap>SCAN_SPEED*3&&scanBuffer.length>0)scanBuffer='';scanBuffer+=e.key;}
+  else scanBuffer='';
+});
+
+// Iniciar
+cargarDesdeFirebase();
+</script>
+</body>
+</html>
