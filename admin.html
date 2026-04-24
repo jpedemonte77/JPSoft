@@ -8,7 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f3;color:#1a1a1a;min-height:100vh;display:flex;align-items:center;justify-content:center}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f3;color:#1a1a1a;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
 #loginWrap,#adminWrap{width:100%;max-width:480px;padding:1.5rem}
 .card{background:#fff;border-radius:12px;border:1px solid #e8e8e6;padding:2rem}
 h1{font-size:18px;font-weight:700;margin-bottom:4px}
@@ -40,6 +40,22 @@ table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
 th{font-size:10px;font-weight:600;color:#aaa;text-align:left;padding:5px 8px;border-bottom:1px solid #eee;background:#fafaf8}
 td{padding:5px 8px;border-bottom:1px solid #f0f0ee;color:#1a1a1a}
 tr:last-child td{border-bottom:none}
+
+/* ── RESPONSIVE ── */
+@media(max-width:480px){
+  body{align-items:flex-start;padding:.75rem}
+  #loginWrap,#adminWrap{padding:.75rem}
+  .card{padding:1.25rem}
+  h1{font-size:16px}
+  .sub{font-size:11px}
+  .upload-zone{padding:1.25rem}
+  .upload-zone div[style*="font-size:28px"]{font-size:22px!important}
+  .btn{padding:13px;font-size:15px}
+  /* Tabla responsive: scroll horizontal */
+  .table-wrap-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{min-width:320px}
+  th,td{padding:5px 6px;font-size:10px}
+}
 </style>
 </head>
 <body>
@@ -232,13 +248,13 @@ document.getElementById('fileInput').addEventListener('change', e => {
         `<strong>${file.name}</strong> — ${allProducts.length.toLocaleString()} productos`;
 
       let html = `<b>Resumen de lectura:</b><br>`;
-      html += `<table><tr><th>Proveedor</th><th>Productos</th><th>Ganancia</th><th>Estado</th></tr>`;
+      html += `<div class="table-wrap-scroll"><table><tr><th>Proveedor</th><th>Productos</th><th>Ganancia</th><th>Estado</th></tr>`;
       resumen.forEach(r => {
         const gan = r.useDir ? 'P. Sugerido' : (r.ganancia != null ? Math.round(r.ganancia*100)+'%' : '50%');
         const est = r.error ? `<span class="badge-err">${r.error}</span>` : `<span class="badge-ok">OK</span>`;
         html += `<tr><td>${r.hoja}</td><td>${r.prods}</td><td>${gan}</td><td>${est}</td></tr>`;
       });
-      html += '</table>';
+      html += '</table></div>';
       document.getElementById('statusBox').innerHTML = html;
       document.getElementById('preview').style.display = 'block';
     } catch(err) {
