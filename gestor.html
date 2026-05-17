@@ -173,6 +173,16 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
   .topbar{padding:10px 14px}
 }
 
+
+/* ── Scanner visual ── */
+.scan-badge{font-size:12px;font-weight:500;padding:5px 12px;border-radius:20px;border:1px solid rgba(0,0,0,0.1);color:#bbb;background:#fff;white-space:nowrap;transition:all .2s;display:inline-flex;align-items:center;gap:6px;flex-shrink:0}
+.scan-dot{width:6px;height:6px;border-radius:50%;background:#ddd;transition:all .2s;flex-shrink:0}
+.search-wrap.scanning input{border-color:rgba(26,122,80,0.5);background:rgba(26,122,80,0.03);box-shadow:0 0 0 3px rgba(26,122,80,0.08)}
+.search-wrap.scanning~.scan-badge,.scan-badge.scanning{color:#1a7a50;border-color:rgba(26,122,80,0.3);background:rgba(26,122,80,0.05)}
+.scan-badge.scanning .scan-dot{background:#1a7a50;animation:scandot .6s ease-in-out infinite}
+.scan-badge.read{color:#1a7a50;border-color:rgba(26,122,80,0.3);background:rgba(26,122,80,0.05)}
+.scan-badge.read .scan-dot{background:#1a7a50}
+@keyframes scandot{0%,100%{opacity:1}50%{opacity:.2}}
 </style>
 </head>
 <body>
@@ -204,9 +214,13 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
     <div>
       <div class="ctrl-label">Producto</div>
       <div class="search-row">
-        <div class="search-wrap">
+        <div class="search-wrap" id="searchWrap">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <input type="text" id="searchInput" placeholder="Buscar: harina avena, arandano, 7798348231769..." oninput="applyFilters()">
+        </div>
+        <div class="scan-badge" id="scanBadge">
+          <span class="scan-dot" id="scanDot"></span>
+          <span id="scanText">Listo para escanear</span>
         </div>
         <div class="search-hint">
           <span>palabras en cualquier orden</span>
@@ -533,6 +547,28 @@ window.toggleGananciaLock = function(){
 // ── Lector de códigos ──
 let scanBuffer='', lastKeyTime=0;
 const SCAN_SPEED=60;
+let scanResetTimer=null;
+
+function setScanState(state){
+  const badge=document.getElementById('scanBadge');
+  const wrap=document.getElementById('searchWrap');
+  if(!badge||!wrap) return;
+  badge.className='scan-badge';
+  wrap.classList.remove('scanning');
+  if(state==='scanning'){
+    badge.classList.add('scanning');
+    wrap.classList.add('scanning');
+    document.getElementById('scanText').textContent='Escaneando...';
+  } else if(state==='read'){
+    badge.classList.add('read');
+    document.getElementById('scanText').textContent='Código leído';
+    if(scanResetTimer) clearTimeout(scanResetTimer);
+    scanResetTimer=setTimeout(()=>setScanState('normal'), 2000);
+  } else {
+    document.getElementById('scanText').textContent='Listo para escanear';
+  }
+}
+
 document.addEventListener('keydown',e=>{
   const now=Date.now();
   const input=document.getElementById('searchInput');
@@ -543,11 +579,19 @@ document.addEventListener('keydown',e=>{
   }
   const gap=now-lastKeyTime; lastKeyTime=now;
   if(e.key==='Enter'){
-    if(scanBuffer.length>=4){input.value=scanBuffer;applyFilters();input.focus();}
+    if(scanBuffer.length>=4){
+      input.value=scanBuffer;
+      setScanState('read');
+      applyFilters();
+      input.focus();
+    }
     scanBuffer=''; return;
   }
-  if(e.key.length===1){if(gap>SCAN_SPEED*3&&scanBuffer.length>0)scanBuffer='';scanBuffer+=e.key;}
-  else scanBuffer='';
+  if(e.key.length===1){
+    if(gap>SCAN_SPEED*3&&scanBuffer.length>0){scanBuffer='';setScanState('normal');}
+    if(scanBuffer.length===0) setScanState('scanning');
+    scanBuffer+=e.key;
+  } else scanBuffer='';
 });
 
 // Iniciar
