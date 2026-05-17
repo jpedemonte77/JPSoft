@@ -56,10 +56,10 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:#f7f7f8;color:#111;mi
 
 /* ── Tabla ── */
 .table-area{flex:1}
-table{width:100%;border-collapse:collapse;table-layout:fixed}
+table{width:100%;border-collapse:collapse}
 th{font-size:12px;font-weight:500;color:#999;text-align:left;padding:8px 14px;border-bottom:1px solid rgba(0,0,0,0.06);background:#f7f7f8;white-space:nowrap;position:sticky;top:0;z-index:1;}
 th.num{text-align:right}
-td{padding:8px 10px;border-bottom:1px solid rgba(0,0,0,0.05);color:#111;vertical-align:middle;background:#fff;white-space:nowrap;overflow:hidden}
+td{padding:8px 10px;border-bottom:1px solid rgba(0,0,0,0.05);color:#111;vertical-align:middle;background:#fff}
 td.num{text-align:right;font-variant-numeric:tabular-nums}
 td.desc{max-width:240px;line-height:1.3}
 tr:last-child td{border-bottom:none}
@@ -479,13 +479,13 @@ function renderTable(){
     // Tabla escritorio
     tbody.innerHTML=rows.map(({p,diff,descHL,unitBadge,precioLabel,inCart,i})=>{
       const nlen=p.desc.length;
-      const prodClass=nlen>70?'prod-largo':nlen>50?'prod-medio':'prod-corto';
+      const prodSize=nlen>70?'11px':nlen>50?'12px':'14px';
       return `<tr class="${inCart?'in-cart':''}">
       <td><button class="add-btn ${inCart?'added':''}" onclick="toggleCartItem(${i})" title="${inCart?'Quitar':'Agregar'}">${inCart?'✓':'+'}</button></td>
       <td style="white-space:nowrap"><span class="badge ${badgeClass(p.proveedor)}">${p.proveedor}</span></td>
       <td style="font-size:11px;color:#bbb;font-family:'DM Mono',monospace">${p.id||'—'}</td>
       <td style="font-size:11px;color:#bbb;font-family:'DM Mono',monospace">${p.cod||'—'}</td>
-      <td style="white-space:nowrap"><span class="${prodClass}">${descHL}</span>${unitBadge}</td>
+      <td style="font-size:${prodSize};font-weight:500;color:#111;white-space:nowrap">${descHL}${unitBadge}</td>
       <td class="num p-lista" style="font-size:12px">${fmt(p.lista)}</td>
       <td class="num p-venta">${precioLabel}</td>
       <td class="num p-diff" style="font-size:12px">+${fmt(diff)}</td>
