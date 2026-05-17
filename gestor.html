@@ -191,6 +191,28 @@ tr.is-fav td{background:rgba(217,119,6,0.03)}
 .fav-btn{width:22px;height:22px;border-radius:50%;border:none;background:none;display:inline-flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;color:#ddd;transition:color .15s;padding:0;line-height:1}
 .fav-btn:hover{color:#d97706}
 .fav-btn.on{color:#d97706}
+
+/* ── Calculadora gramos ── */
+.pventa-btn{font-size:15px;font-weight:600;color:#111;background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:6px;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:4px}
+.pventa-btn:hover{background:rgba(0,0,0,0.05)}
+.pventa-btn.open{background:rgba(26,122,80,0.08);color:#1a7a50}
+.calc-icon{font-size:11px;color:#bbb;transition:color .15s}
+.pventa-btn.open .calc-icon{color:#1a7a50}
+tr.active-calc td{background:#f7f7f8}
+.calc-row td{padding:0;border-bottom:1px solid rgba(0,0,0,0.05)}
+.calc-popover{padding:11px 14px;background:#fafafa;display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid rgba(0,0,0,0.04)}
+.calc-label{font-size:12px;color:#999;white-space:nowrap}
+.calc-input-wrap{display:flex;align-items:center;gap:6px}
+.calc-input{width:80px;padding:5px 10px;border:1px solid rgba(0,0,0,0.12);border-radius:7px;font-size:14px;font-weight:500;font-family:'DM Mono',monospace;color:#111;outline:none;text-align:right;background:#fff;transition:all .15s}
+.calc-input:focus{border-color:rgba(0,0,0,0.3);box-shadow:0 0 0 3px rgba(0,0,0,0.05)}
+.calc-unit{font-size:13px;color:#999;font-weight:500}
+.calc-arrow{font-size:15px;color:#ccc}
+.calc-price{font-size:20px;font-weight:600;color:#1a7a50}
+.calc-base{font-size:11px;color:#bbb;margin-left:2px}
+.calc-presets{display:flex;gap:4px;margin-left:auto}
+.preset-btn{font-size:11px;padding:4px 9px;border-radius:6px;border:1px solid rgba(0,0,0,0.1);background:#fff;color:#555;cursor:pointer;font-family:inherit;transition:all .15s}
+.preset-btn:hover{background:#f0f0f2}
+.preset-btn.active{background:#111;color:#fff;border-color:#111}
 </style>
 </head>
 <body>
@@ -517,7 +539,21 @@ function renderTable(){
     tbody.innerHTML=rows.map(({p,diff,descHL,unitBadge,precioLabel,inCart,i})=>{
       const prodSize=calcFontSize(p.desc);
       const isFav=favSet.has(favId(p));
-      return `<tr class="${inCart?'in-cart':''} ${isFav?'is-fav':''}">
+      const isCalcOpen=calcOpenKey===p.key;
+      const pv=getPrecioVenta(p);
+      // Botón calculadora solo para kg y 100g
+      let pventaCell='';
+      if(p.unit==='kg'||p.unit==='100g'){
+        const sufijo=p.unit==='kg'?'/kg':'/100g';
+        pventaCell=`<button class="pventa-btn ${isCalcOpen?'open':''}" onclick="toggleCalc('${p.key.replace(/'/g,"\'")}',${pv})" title="Calculá el precio por gramo">
+          ${fmt(pv)}<span style="font-size:10px;color:#999;font-weight:400">${sufijo}</span>
+          <span class="calc-icon">⊞</span>
+        </button>`;
+      } else {
+        pventaCell=`<span class="p-venta">${precioLabel}</span>`;
+      }
+      // Fila principal
+      let rows_html=`<tr class="${inCart?'in-cart':''} ${isFav?'is-fav':''} ${isCalcOpen?'active-calc':''}">
       <td><button class="add-btn ${inCart?'added':''}" onclick="toggleCartItem(${i})" title="${inCart?'Quitar':'Agregar'}">${inCart?'✓':'+'}</button></td>
       <td><button class="fav-btn ${isFav?'on':''}" onclick="toggleFav(${i})" title="${isFav?'Quitar de favoritos':'Agregar a favoritos'}">${isFav?'★':'☆'}</button></td>
       <td style="white-space:nowrap"><span class="badge ${badgeClass(p.proveedor)}">${p.proveedor}</span></td>
@@ -525,9 +561,36 @@ function renderTable(){
       <td style="font-size:11px;color:#bbb;font-family:'DM Mono',monospace">${p.cod||'—'}</td>
       <td style="font-size:${prodSize};font-weight:500;color:#111;white-space:nowrap">${descHL}${unitBadge}</td>
       <td class="num p-lista" style="font-size:12px">${fmt(p.lista)}</td>
-      <td class="num p-venta">${precioLabel}</td>
+      <td class="num" style="text-align:right">${pventaCell}</td>
       <td class="num p-diff" style="font-size:12px">+${fmt(diff)}</td>
-    </tr>`;}).join('');
+    </tr>`;
+      // Fila calculadora expandible
+      if(isCalcOpen){
+        const ek=p.key.replace(/'/g,"\'");
+        const defG=p.unit==='100g'?100:500;
+        const defP=p.unit==='100g'?Math.round(pv*defG/100):Math.round(pv*defG/1000);
+        const sufLabel=p.unit==='100g'?'100g':'kg';
+        rows_html+=`<tr class="calc-row"><td colspan="9"><div class="calc-popover">
+          <span class="calc-label">Precio para</span>
+          <div class="calc-input-wrap">
+            <input class="calc-input" id="calcInput_${p.key}" type="number" value="${defG}" min="1"
+              oninput="calcularGramos('${ek}',${pv})"
+              onkeydown="if(event.key==='Escape')toggleCalc('${ek}',${pv})">
+            <span class="calc-unit">g</span>
+          </div>
+          <span class="calc-arrow">→</span>
+          <span class="calc-price" id="calcResult_${p.key}">$${defP.toLocaleString('es-AR')}</span>
+          <span class="calc-base">($${fmt(pv)}/${sufLabel})</span>
+          <div class="calc-presets">
+            <button class="preset-btn ${defG===100?'active':''}" data-key="${p.key}" data-g="100" onclick="setPreset('${ek}',${pv},100)">100g</button>
+            <button class="preset-btn ${defG===250?'active':''}" data-key="${p.key}" data-g="250" onclick="setPreset('${ek}',${pv},250)">250g</button>
+            <button class="preset-btn ${defG===500?'active':''}" data-key="${p.key}" data-g="500" onclick="setPreset('${ek}',${pv},500)">500g</button>
+            <button class="preset-btn" data-key="${p.key}" data-g="1000" onclick="setPreset('${ek}',${pv},1000)">1kg</button>
+            <button class="preset-btn" data-key="${p.key}" data-g="2000" onclick="setPreset('${ek}',${pv},2000)">2kg</button>
+          </div>
+        </div></td></tr>`;
+      }
+      return rows_html;}).join('');
     // Tarjetas móvil
     cardList.innerHTML=rows.map(({p,venta,diff,descHL,unitSuffix})=>`
       <div class="prod-card">
@@ -748,6 +811,41 @@ function updateFavStat(){
   if(el) el.textContent = favSet.size;
 }
 
+
+// ── Calculadora gramos ──
+let calcOpenKey = null;
+
+window.toggleCalc = function(key, precioKg){
+  // Si ya está abierta esta, la cerramos
+  if(calcOpenKey === key){
+    calcOpenKey = null;
+    renderTable();
+    return;
+  }
+  calcOpenKey = key;
+  renderTable();
+  // Focus al input
+  setTimeout(()=>{
+    const inp = document.getElementById('calcInput_'+key);
+    if(inp){ inp.select(); }
+  }, 50);
+};
+
+window.calcularGramos = function(key, precioKg){
+  const inp = document.getElementById('calcInput_'+key);
+  const res = document.getElementById('calcResult_'+key);
+  if(!inp||!res) return;
+  const g = parseFloat(inp.value)||0;
+  res.textContent = g>0 ? '$'+Math.round(precioKg*g/1000).toLocaleString('es-AR') : '—';
+};
+
+window.setPreset = function(key, precioKg, g){
+  const inp = document.getElementById('calcInput_'+key);
+  if(inp){ inp.value=g; calcularGramos(key, precioKg); }
+  document.querySelectorAll('.preset-btn[data-key="'+key+'"]').forEach(b=>{
+    b.classList.toggle('active', parseInt(b.dataset.g)===g);
+  });
+};
 cargarDesdeFirebase();
 </script>
 </body>
