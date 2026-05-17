@@ -161,7 +161,7 @@ function detectSheetConfig(rows){
         }
       });
     }
-    const hasDesc=r.some(c=>c.includes('DESC')||c.includes('NOMBRE'));
+    const hasDesc=r.some(c=>c.includes('DESC')||c.includes('NOMBRE')||c.includes('PRODUCTO'));
     const hasLista=r.some(c=>c.includes('LISTA')&&!c.includes('SUGERIDO'));
     if(hasDesc&&hasLista){
       headerRow=i;
