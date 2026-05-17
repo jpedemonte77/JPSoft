@@ -254,6 +254,7 @@ tr.is-fav td{background:rgba(217,119,6,0.03)}
         <thead>
           <tr>
             <th></th>
+            <th></th>
             <th>Proveedor</th>
             <th>ID</th>
             <th>Código</th>
@@ -515,8 +516,10 @@ function renderTable(){
 
     tbody.innerHTML=rows.map(({p,diff,descHL,unitBadge,precioLabel,inCart,i})=>{
       const prodSize=calcFontSize(p.desc);
-      return `<tr class="${inCart?'in-cart':''}">
+      const isFav=favSet.has(favId(p));
+      return `<tr class="${inCart?'in-cart':''} ${isFav?'is-fav':''}">
       <td><button class="add-btn ${inCart?'added':''}" onclick="toggleCartItem(${i})" title="${inCart?'Quitar':'Agregar'}">${inCart?'✓':'+'}</button></td>
+      <td><button class="fav-btn ${isFav?'on':''}" onclick="toggleFav(${i})" title="${isFav?'Quitar de favoritos':'Agregar a favoritos'}">${isFav?'★':'☆'}</button></td>
       <td style="white-space:nowrap"><span class="badge ${badgeClass(p.proveedor)}">${p.proveedor}</span></td>
       <td style="font-size:11px;color:#bbb;font-family:'DM Mono',monospace">${p.id||'—'}</td>
       <td style="font-size:11px;color:#bbb;font-family:'DM Mono',monospace">${p.cod||'—'}</td>
