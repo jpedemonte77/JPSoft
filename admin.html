@@ -6,54 +6,49 @@
 <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
 <title>JPSoft | Dietética</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html{height:100%;height:100dvh}
-body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f3;color:#1a1a1a;min-height:100%;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:1rem}
-#loginWrap,#adminWrap{width:100%;max-width:480px;padding:1.5rem}
-.card{background:#fff;border-radius:12px;border:1px solid #e8e8e6;padding:2rem}
-h1{font-size:18px;font-weight:700;margin-bottom:4px}
-.sub{font-size:12px;color:#888;margin-bottom:1.5rem}
-label{font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px}
-input[type=password],input[type=text]{width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:14px;outline:none;margin-bottom:1rem;transition:border .15s}
-input:focus{border-color:#1a1a1a}
-.btn{width:100%;padding:11px;border-radius:8px;border:none;background:#1a1a1a;color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+body{font-family:'DM Sans',system-ui,sans-serif;background:#f7f7f8;color:#111;min-height:100%;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:1rem}
+#loginWrap,#adminWrap{width:100%;max-width:480px;padding:1rem}
+#adminWrap{max-width:620px}
+.card{background:#fff;border-radius:14px;border:1px solid rgba(0,0,0,0.08);padding:2rem}
+.brand{font-size:17px;font-weight:600;color:#111;margin-bottom:4px}
+.sub{font-size:13px;color:#999;margin-bottom:1.5rem}
+label{font-size:12px;font-weight:500;color:#555;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+input[type=password],input[type=text]{width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;font-size:14px;font-family:'DM Sans',system-ui,sans-serif;outline:none;margin-bottom:1rem;transition:all .15s;background:#f7f7f8;color:#111}
+input:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px rgba(0,0,0,0.05)}
+.btn{width:100%;padding:11px;border-radius:8px;border:none;background:#111;color:#fff;font-size:14px;font-weight:500;cursor:pointer;transition:background .15s;font-family:'DM Sans',system-ui,sans-serif}
 .btn:hover{background:#333}
-.btn:disabled{background:#ccc;cursor:default}
-.btn-outline{background:#fff;color:#1a1a1a;border:1.5px solid #ddd;margin-top:8px}
-.btn-outline:hover{background:#f5f5f3;border-color:#888}
-.error{font-size:12px;color:#dc2626;margin-top:-8px;margin-bottom:12px}
-#adminWrap{max-width:600px}
-.upload-zone{border:2px dashed #ccc;border-radius:10px;padding:2rem;text-align:center;cursor:pointer;margin-bottom:1rem;transition:background .15s;background:#fff}
-.upload-zone:hover{background:#f0f0ee}
-.upload-zone.loaded{border-style:solid;border-color:#4caf50;background:#f0faf0}
+.btn:disabled{background:rgba(0,0,0,0.2);cursor:default}
+.btn-outline{background:#fff;color:#555;border:1px solid rgba(0,0,0,0.12);margin-top:8px}
+.btn-outline:hover{background:#f7f7f8;color:#111;border-color:rgba(0,0,0,0.2)}
+.error{font-size:12px;color:#c0391a;margin-top:-8px;margin-bottom:12px}
+.upload-zone{border:1.5px dashed rgba(0,0,0,0.15);border-radius:10px;padding:2rem;text-align:center;cursor:pointer;margin-bottom:1rem;transition:all .15s;background:#f7f7f8}
+.upload-zone:hover{background:#f0f0f2;border-color:rgba(0,0,0,0.25)}
+.upload-zone.loaded{border-style:solid;border-color:rgba(26,122,80,0.4);background:rgba(26,122,80,0.04)}
 .upload-label{font-size:13px;color:#555}
-.upload-label strong{color:#1a1a1a}
-.status-box{background:#f5f5f3;border-radius:8px;padding:12px 16px;margin-top:1rem;font-size:12px;color:#555;line-height:1.7}
-.status-box b{color:#1a1a1a}
-.badge-ok{display:inline-block;background:#d1fae5;color:#065f46;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
-.badge-err{display:inline-block;background:#fee2e2;color:#991b1b;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
-.progress{height:4px;background:#eee;border-radius:2px;margin:8px 0;overflow:hidden}
-.progress-bar{height:4px;background:#1a1a1a;border-radius:2px;width:0;transition:width .3s}
-.logout{font-size:11px;color:#aaa;cursor:pointer;text-align:right;margin-bottom:12px}
-.logout:hover{color:#dc2626}
-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
-th{font-size:10px;font-weight:600;color:#aaa;text-align:left;padding:5px 8px;border-bottom:1px solid #eee;background:#fafaf8}
-td{padding:5px 8px;border-bottom:1px solid #f0f0ee;color:#1a1a1a}
+.upload-label strong{color:#111}
+.status-box{background:#f7f7f8;border-radius:8px;padding:12px 16px;margin-top:1rem;font-size:13px;color:#555;line-height:1.7;border:1px solid rgba(0,0,0,0.06)}
+.status-box b{color:#111}
+.badge-ok{display:inline-block;background:rgba(26,122,80,0.08);color:#1a7a50;border:1px solid rgba(26,122,80,0.2);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:500}
+.badge-err{display:inline-block;background:rgba(192,57,26,0.08);color:#c0391a;border:1px solid rgba(192,57,26,0.2);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:500}
+.progress{height:3px;background:rgba(0,0,0,0.06);border-radius:2px;margin:10px 0;overflow:hidden}
+.progress-bar{height:3px;background:#111;border-radius:2px;width:0;transition:width .3s}
+.logout{font-size:12px;color:#bbb;cursor:pointer;text-align:right;margin-bottom:10px;font-family:'DM Sans',system-ui,sans-serif}
+.logout:hover{color:#c0391a}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+th{font-size:11px;font-weight:500;color:#999;text-align:left;padding:6px 10px;border-bottom:1px solid rgba(0,0,0,0.06);background:#f7f7f8}
+td{padding:6px 10px;border-bottom:1px solid rgba(0,0,0,0.04);color:#111}
 tr:last-child td{border-bottom:none}
-
-/* ── RESPONSIVE ── */
 @media(max-width:480px){
-  #loginWrap,#adminWrap{padding:.75rem}
+  #loginWrap,#adminWrap{padding:.5rem}
   .card{padding:1.25rem}
-  h1{font-size:16px}
-  .sub{font-size:11px}
-  .upload-zone{padding:1.25rem}
-  .upload-zone div[style*="font-size:28px"]{font-size:22px!important}
+  .brand{font-size:15px}
   .btn{padding:13px;font-size:15px}
   .table-wrap-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
   table{min-width:320px}
-  th,td{padding:5px 6px;font-size:10px}
 }
 </style>
 </head>
@@ -62,7 +57,7 @@ tr:last-child td{border-bottom:none}
 <!-- LOGIN -->
 <div id="loginWrap">
   <div class="card">
-    <h1>JPSoft | Dietética</h1>
+    <div class="brand">JPSoft | Dietética</div>
     <div class="sub">Ingresá tu contraseña para continuar</div>
     <label>Contraseña</label>
     <input type="password" id="pwdInput" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
@@ -75,7 +70,7 @@ tr:last-child td{border-bottom:none}
 <div id="adminWrap" style="display:none">
   <div class="logout" onclick="doLogout()">✕ Cerrar sesión</div>
   <div class="card">
-    <h1>Actualizar listas de precios</h1>
+    <div class="brand">Actualizar listas de precios</div>
     <div class="sub">Cargá el Excel con las hojas de proveedores</div>
 
     <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
