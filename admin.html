@@ -168,7 +168,7 @@ function detectSheetConfig(rows){
       r.forEach((c,idx)=>{
         if(colId<0&&c==='ID') colId=idx;
         if(colCod<0&&(c.includes('COD')||c==='#'||c==='CODIGO'||c==='CÓDIGO')) colCod=idx;
-        if(colDesc<0&&(c.includes('DESC')||c.includes('NOMBRE'))) colDesc=idx;
+        if(colDesc<0&&(c.includes('DESC')||c.includes('NOMBRE')||c.includes('PRODUCTO'))) colDesc=idx;
         if(colLista<0&&c.includes('LISTA')&&!c.includes('SUGERIDO')) colLista=idx;
         if(colSugerido<0&&c.includes('SUGERIDO')) colSugerido=idx;
       });
