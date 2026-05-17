@@ -477,9 +477,26 @@ function renderTable(){
       return {p,venta,diff,descHL,unitBadge,precioLabel,unitSuffix,inCart,i};
     });
     // Tabla escritorio
+    // Medir ancho disponible para columna Producto
+    const tableW = document.querySelector('.table-area table')?.offsetWidth || 1024;
+    const fixedW = 36+120+52+110+82+98+74; // anchos aprox de columnas fijas
+    const prodColW = Math.max(tableW - fixedW, 200);
+
+    // Canvas para medir texto real
+    const _ctx = document.createElement('canvas').getContext('2d');
+    function medirTexto(txt, size) {
+      _ctx.font = `500 ${size}px "DM Sans", system-ui, sans-serif`;
+      return _ctx.measureText(txt).width;
+    }
+    function calcFontSize(txt) {
+      for(const size of [14,13,12,11,10]) {
+        if(medirTexto(txt, size) <= prodColW) return size+'px';
+      }
+      return '10px';
+    }
+
     tbody.innerHTML=rows.map(({p,diff,descHL,unitBadge,precioLabel,inCart,i})=>{
-      const nlen=p.desc.length;
-      const prodSize=nlen>70?'11px':nlen>50?'12px':'14px';
+      const prodSize=calcFontSize(p.desc);
       return `<tr class="${inCart?'in-cart':''}">
       <td><button class="add-btn ${inCart?'added':''}" onclick="toggleCartItem(${i})" title="${inCart?'Quitar':'Agregar'}">${inCart?'✓':'+'}</button></td>
       <td style="white-space:nowrap"><span class="badge ${badgeClass(p.proveedor)}">${p.proveedor}</span></td>
