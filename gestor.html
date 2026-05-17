@@ -456,8 +456,8 @@ window.applyFilters = function(){
   const raw=document.getElementById('searchInput').value;
   const words=norm(raw).split(' ').filter(Boolean);
   filtered=allProducts.filter(p=>{
-    const mp=activeFilter==='Todos'||p.proveedor===activeFilter;
-    if(!mp) return false;
+    if(showingFavs && !favSet.has(favId(p))) return false;
+    if(!showingFavs && activeFilter!=='Todos' && p.proveedor!==activeFilter) return false;
     if(!words.length) return true;
     return matchQuery(p.normDesc,words)||matchQuery(p.normCod,words)||matchQuery(p.normId||'',words);
   });
