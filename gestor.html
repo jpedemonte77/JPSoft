@@ -183,6 +183,14 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
 .scan-badge.read{color:#1a7a50;border-color:rgba(26,122,80,0.3);background:rgba(26,122,80,0.05)}
 .scan-badge.read .scan-dot{background:#1a7a50}
 @keyframes scandot{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* ── Favoritos ── */
+.pill.fav-pill{background:rgba(217,119,6,0.06);color:#92400e;border-color:rgba(217,119,6,0.25);display:inline-flex;align-items:center;gap:5px}
+.pill.fav-pill.active{background:#92400e;color:#fff;border-color:#92400e}
+tr.is-fav td{background:rgba(217,119,6,0.03)}
+.fav-btn{width:22px;height:22px;border-radius:50%;border:none;background:none;display:inline-flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;color:#ddd;transition:color .15s;padding:0;line-height:1}
+.fav-btn:hover{color:#d97706}
+.fav-btn.on{color:#d97706}
 </style>
 </head>
 <body>
@@ -209,7 +217,7 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
   <div class="controls">
     <div>
       <div class="ctrl-label">Proveedor</div>
-      <div class="pills" id="filtersRow"></div>
+      <div class="pills" id="filtersRow"><button class="pill fav-pill" id="favPill" onclick="toggleFavFilter()">★ Favoritos</button></div>
     </div>
     <div>
       <div class="ctrl-label">Producto</div>
@@ -234,6 +242,7 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
   <!-- Stats -->
   <div class="stats-row">
     <div class="stat"><div class="stat-n" id="statTotal">0</div><div class="stat-l">productos encontrados</div></div>
+      <div class="stat"><div class="stat-n" id="statFavs">0</div><div class="stat-l">favoritos</div></div>
     <div class="stat"><div class="stat-n" id="statProv">0</div><div class="stat-l">proveedores</div></div>
     <div class="stat" id="statUpdateWrap" style="display:none"><div class="stat-n" id="statUpdate"></div><div class="stat-l">última actualización</div></div>
   </div>
@@ -311,7 +320,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebas
 // publicás precios nuevos desde el admin, Firebase avisa
 // automáticamente y la página se actualiza sola.
 // ════════════════════════════════════════════════════════
-import { getDatabase, ref, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { getDatabase, ref, onValue, set, get } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
 const FIREBASE_URL = 'https://jpsoft---gestor-default-rtdb.firebaseio.com';
 const app = initializeApp({ databaseURL: FIREBASE_URL });
@@ -389,6 +398,7 @@ function cargarDesdeFirebase(){
     buildGananciasPanel();
     buildFilters();
     applyFilters();
+    cargarFavs();
 
   }, (err) => {
     mostrarError('Error al conectar con el servidor. Verificá tu conexión a internet.<br><small>'+err.message+'</small>');
@@ -429,7 +439,7 @@ function buildFilters(){
     const btn=document.createElement('button');
     btn.className='pill'+(name===activeFilter?' active':'');
     btn.textContent=name;
-    btn.onclick=()=>{activeFilter=name;document.querySelectorAll('.pill').forEach(b=>b.classList.remove('active'));btn.classList.add('active');page=1;applyFilters();document.getElementById('searchInput').focus();};
+    btn.onclick=()=>{activeFilter=name;showingFavs=false;document.querySelectorAll('.pill').forEach(b=>b.classList.remove('active'));btn.classList.add('active');page=1;applyFilters();document.getElementById('searchInput').focus();};
     row.appendChild(btn);
   });
 }
@@ -672,6 +682,62 @@ function renderCart(){
 window.confirmarNuevaVenta=function(){if(Object.keys(cart).length)document.getElementById('modalOverlay').style.display='flex';};
 window.cerrarModal=function(){document.getElementById('modalOverlay').style.display='none';};
 window.nuevaVenta=function(){Object.keys(cart).forEach(k=>delete cart[k]);cerrarModal();renderTable();renderCart();};
+
+// ── Favoritos ──
+let favSet = new Set();
+let showingFavs = false;
+
+function favId(p){ return p.proveedor + '||' + p.desc; }
+
+// Clave Firebase segura (sin caracteres inválidos)
+function favKey(fid){ return fid.replace(/[.#$\[\]/]/g,'_'); }
+
+async function cargarFavs(){
+  try {
+    const snap = await get(ref(db, 'gestor_favs'));
+    if(snap.exists()){
+      favSet = new Set(Object.keys(snap.val()).map(k=>k.replace(/_DOT_/g,'.').replace(/_HASH_/g,'#')));
+    }
+  } catch(e){ console.warn('Error cargando favoritos:', e); }
+  updateFavStat();
+  renderTable();
+}
+
+async function saveFavs(){
+  try {
+    const obj = {};
+    favSet.forEach(fid => { obj[favKey(fid)] = true; });
+    await set(ref(db, 'gestor_favs'), Object.keys(obj).length ? obj : null);
+  } catch(e){ console.warn('Error guardando favoritos:', e); }
+}
+
+function toggleFavFilter(){
+  showingFavs = !showingFavs;
+  document.getElementById('favPill').classList.toggle('active', showingFavs);
+  if(showingFavs){
+    activeFilter = 'Todos';
+    document.querySelectorAll('.pill:not(.fav-pill)').forEach(b=>b.classList.remove('active'));
+  }
+  page = 1;
+  applyFilters();
+}
+
+window.toggleFav = function(idx){
+  const key = idxMap[idx]; if(!key) return;
+  const p = allProducts.find(x=>x.key===key); if(!p) return;
+  const fid = favId(p);
+  if(favSet.has(fid)){ favSet.delete(fid); }
+  else { favSet.add(fid); }
+  saveFavs();
+  renderTable();
+  updateFavStat();
+};
+
+function updateFavStat(){
+  const el = document.getElementById('statFavs');
+  if(el) el.textContent = favSet.size;
+}
+
 cargarDesdeFirebase();
 </script>
 </body>
