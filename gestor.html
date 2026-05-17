@@ -217,7 +217,7 @@ tr.is-fav td{background:rgba(217,119,6,0.03)}
   <div class="controls">
     <div>
       <div class="ctrl-label">Proveedor</div>
-      <div class="pills" id="filtersRow"><button class="pill fav-pill" id="favPill" onclick="toggleFavFilter()">★ Favoritos</button></div>
+      <div class="pills" id="filtersRow"></div>
     </div>
     <div>
       <div class="ctrl-label">Producto</div>
@@ -435,6 +435,13 @@ function buildFilters(){
   document.getElementById('statProv').textContent=provs.length;
   const row=document.getElementById('filtersRow');
   row.innerHTML='';
+  // Pill de favoritos siempre primero
+  const favPill=document.createElement('button');
+  favPill.id='favPill';
+  favPill.className='pill fav-pill'+(showingFavs?' active':'');
+  favPill.innerHTML='★ Favoritos';
+  favPill.onclick=toggleFavFilter;
+  row.appendChild(favPill);
   ['Todos',...provs].forEach(name=>{
     const btn=document.createElement('button');
     btn.className='pill'+(name===activeFilter?' active':'');
