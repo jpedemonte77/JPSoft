@@ -239,13 +239,15 @@ tr.is-fav td{background:rgba(217,119,6,0.03)}
   <!-- Topbar -->
   <div class="topbar">
     <span class="tb-brand">JPSoft | Dietética <span class="tb-update" id="tbUpdate"></span></span>
-    <button class="btn-toggle" id="toggleGan" onclick="togglePanel('gan')">
-      <span class="dot"></span> Ganancia
-    </button>
-    <button class="btn-toggle" id="toggleCart" onclick="togglePanel('cart')">
-      <span class="dot"></span> Carrito
-      <span id="cartBadge" style="display:none;background:rgba(255,255,255,.25);border-radius:20px;font-size:9px;padding:1px 5px;margin-left:2px"></span>
-    </button>
+    <div class="toggle-group">
+      <button class="btn-toggle" id="toggleGan" onclick="togglePanel('gan')">
+        <span class="dot"></span> Ganancia
+      </button>
+      <button class="btn-toggle" id="toggleCart" onclick="togglePanel('cart')">
+        <span class="dot"></span> Carrito
+        <span id="cartBadge" style="display:none;background:rgba(255,255,255,.25);border-radius:20px;font-size:9px;padding:1px 5px;margin-left:2px"></span>
+      </button>
+    </div>
   </div>
 
   <!-- Controls -->
