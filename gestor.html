@@ -167,7 +167,7 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
 }
 @media(max-width:640px){
   /* Ocultar Ganancia/Carrito y paneles */
-  .toggle-group{display:none}
+  .toggle-group{display:none!important}
   .side-panels{display:none!important}
   /* Ocultar scanner y hints */
   .scan-badge{display:none!important}
@@ -177,7 +177,7 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
   .tb-brand{font-size:15px}
   /* Controls */
   .controls{padding:10px 16px 14px}
-  .search-wrap{flex:0 0 100%}
+  .search-wrap{flex:0 0 100%!important;max-width:100%!important;width:100%!important}
   .search-row{flex-direction:column;gap:6px}
   .pills{flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
   .pills::-webkit-scrollbar{display:none}
