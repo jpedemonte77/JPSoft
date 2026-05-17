@@ -458,10 +458,13 @@ function renderTable(){
       let precioLabel=fmt(venta);
       const unitSuffix=p.unit==='kg'?'/kg':p.unit==='100g'?'/100g':'';
       if(unitSuffix) precioLabel=fmt(venta)+`<span style="font-size:9px;color:#aaa;font-weight:400">${unitSuffix}</span>`;
-      return {p,venta,diff,descHL,unitBadge,precioLabel,unitSuffix};
+      const inCart=!!cart[p.key];
+      const i=getIdx(p.key);
+      return {p,venta,diff,descHL,unitBadge,precioLabel,unitSuffix,inCart,i};
     });
     // Tabla escritorio
-    tbody.innerHTML=rows.map(({p,diff,descHL,unitBadge,precioLabel})=>`<tr>
+    tbody.innerHTML=rows.map(({p,diff,descHL,unitBadge,precioLabel,inCart,i})=>`<tr class="${inCart?'in-cart':''}">
+      <td><button class="add-btn ${inCart?'added':''}" onclick="toggleCartItem(${i})" title="${inCart?'Quitar':'Agregar'}">${inCart?'✓':'+'}</button></td>
       <td><span class="badge ${badgeClass(p.proveedor)}">${p.proveedor}</span></td>
       <td class="id-cell">${p.id||'—'}</td>
       <td class="cod-cell">${p.cod||'—'}</td>
