@@ -4,67 +4,38 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <title>JPSoft | Dietética</title>
-
 <style>
-html, body{
-  height: 100%;
-  height: 100dvh;
-  overflow: hidden;
-}
-
-body{
-  font-family: system-ui;
-  background:#f5f5f3;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  margin:0;
-  padding:1rem;
-}
-
-.container{
-  background:#fff;
-  padding:2rem;
-  border-radius:12px;
-  border:1px solid #ddd;
-  text-align:center;
-  width:100%;
-  max-width:320px;
-}
-
-h1{
-  font-size:18px;
-  margin-bottom:1rem;
-}
-
-a{
-  display:block;
-  margin:10px 0;
-  padding:12px;
-  border-radius:8px;
-  text-decoration:none;
-  background:#1a1a1a;
-  color:#fff;
-  font-weight:600;
-  font-size:15px;
-  transition:0.2s;
-}
-
-a:hover{
-  background:#333;
-}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;height:100dvh;overflow:hidden}
+body{font-family:'DM Sans',system-ui,sans-serif;background:#f7f7f8;color:#111;display:flex;justify-content:center;align-items:center;padding:1rem}
+.card{background:#fff;border:1px solid rgba(0,0,0,0.08);border-radius:14px;padding:2.5rem 2rem;width:100%;max-width:300px;text-align:center}
+.brand{font-size:18px;font-weight:600;color:#111;margin-bottom:6px}
+.sub{font-size:13px;color:#999;margin-bottom:2rem}
+.divider{height:1px;background:rgba(0,0,0,0.06);margin-bottom:1.5rem}
+a{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:13px 16px;border-radius:8px;text-decoration:none;border:1px solid rgba(0,0,0,0.1);background:#fff;color:#111;font-weight:500;font-size:14px;transition:all .15s}
+a:last-child{margin-bottom:0}
+a:hover{background:#f7f7f8;border-color:rgba(0,0,0,0.2)}
+a.primary{background:#111;color:#fff;border-color:#111}
+a.primary:hover{background:#333;border-color:#333}
+.arrow{font-size:16px;opacity:.5}
+a.primary .arrow{opacity:.7}
 </style>
 </head>
-
 <body>
-
-<div class="container">
-  <h1>JPSoft | Dietética</h1>
-
-  <a href="admin.html">Ir a Admin</a>
-  <a href="gestor.html">Ir a Gestor</a>
+<div class="card">
+  <div class="brand">JPSoft | Dietética</div>
+  <div class="sub">Gestión de precios y proveedores</div>
+  <div class="divider"></div>
+  <a href="gestor.html" class="primary">
+    Ir al Gestor
+    <span class="arrow">→</span>
+  </a>
+  <a href="admin.html">
+    Administración
+    <span class="arrow">→</span>
+  </a>
 </div>
-
 </body>
 </html>
