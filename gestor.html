@@ -370,7 +370,7 @@ function cargarDesdeFirebase(){
     }
 
     document.getElementById('loadingScreen').style.display = 'none';
-    document.getElementById('mainUI').style.display = 'block';
+    document.getElementById('app').style.display = 'block';
     buildGananciasPanel();
     buildFilters();
     applyFilters();
@@ -500,7 +500,7 @@ function renderPagination(totalPages){
 window.changePage = function(dir){page+=dir;renderTable();}
 
 window.toggleGananciaLock = function(){
-  const locked = document.getElementById('ganPanel').classList.toggle('locked');
+  const locked = document.getElementById('ganPanelInner').classList.toggle('locked');
   const btn = document.getElementById('ganLockBtn');
   btn.classList.toggle('locked', locked);
   btn.innerHTML = locked ? '🔒 Bloqueado' : '🔓 Libre';
