@@ -108,6 +108,7 @@ select:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px r
         <option value="POLIMIEL">POLIMIEL (.pdf)</option>
         <option value="TAHONA">TAHONA (.xlsx)</option>
         <option value="G NATURALE">G NATURALE (.xls)</option>
+        <option value="FITOFARM">FITOFARM (web)</option>
       </select>
     </div>
 
@@ -129,7 +130,11 @@ select:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px r
       <div id="barcodesStatus" style="font-size:12px;color:#999;margin-top:6px;padding:0 4px"></div>
     </div>
 
-    <div id="convResult" style="display:none">
+    <!-- Zona especial para FITOFARM (fetch desde la web) -->
+    <div id="fitofarmZone" style="display:none;margin-top:10px">
+      <button class="btn" id="fitofarmBtn" onclick="fetchFitofarm()">🌐 Obtener lista desde fitofarmlab.com</button>
+      <div id="fitofarmStatus" style="font-size:12px;color:#999;margin-top:8px;padding:0 4px"></div>
+    </div>
       <div class="status-box" id="convStatus"></div>
       <button class="btn" id="convBtn" onclick="descargarConvertido()" style="margin-top:1rem">⬇ Descargar Excel convertido</button>
       <button class="btn btn-outline" onclick="resetConv()" style="margin-top:8px">Cancelar</button>
@@ -353,6 +358,20 @@ window.subirAFirebase = async function(){
 
 // Configuración por proveedor
 const CONVERSORES = {
+  FITOFARM: {
+    ganancia: 0.2,
+    tipo: 'web',
+    url: 'https://fitofarmlab.com/lista.php',
+    // Código largo (EAN, ≥10 dígitos) → CODIGO; código corto (interno) → ID
+    asignarCodigo(codWeb) {
+      const soloDigitos = /^\d+$/.test(codWeb);
+      if(soloDigitos && codWeb.length >= 10) {
+        return {id: '', cod: codWeb};
+      }
+      return {id: codWeb, cod: ''};
+    }
+  },
+
   PROGEN: {
     ganancia: 0.5,
     tipo: 'xlsx',
@@ -592,13 +611,16 @@ let convData = null;
 document.getElementById('convProveedor').addEventListener('change', function(){
   const prov = this.value;
   const conv = CONVERSORES[prov];
-  document.getElementById('convZone').style.display = prov ? 'block' : 'none';
+  const esWeb = conv && conv.tipo === 'web';
+  document.getElementById('convZone').style.display = (prov && !esWeb) ? 'block' : 'none';
   document.getElementById('convResult').style.display = 'none';
   document.getElementById('convInput').value = '';
   document.getElementById('tahonaBarcodesZone').style.display = prov==='TAHONA' ? 'block' : 'none';
+  document.getElementById('fitofarmZone').style.display = esWeb ? 'block' : 'none';
+  document.getElementById('fitofarmStatus').textContent = '';
   document.getElementById('barcodesStatus').textContent = '';
   tahonaBarcodesMap = null;
-  if(conv){
+  if(conv && !esWeb){
     const esPdf = conv.tipo==='pdf-ocr' || conv.tipo==='pdf-native';
     document.getElementById('convZoneHint').textContent = esPdf ? 'Soporta .pdf' : 'Soporta .xlsx / .xls';
     document.getElementById('convInput').accept = esPdf ? '.pdf' : '.xlsx,.xls';
@@ -910,13 +932,67 @@ window.descargarConvertido = function(){
   XLSX.writeFile(wb, `${prov}_convertido_${fechaStr}.xlsx`);
 };
 
+// ── FITOFARM: obtener lista desde la web ──
+window.fetchFitofarm = async function(){
+  const btn = document.getElementById('fitofarmBtn');
+  const status = document.getElementById('fitofarmStatus');
+  btn.disabled = true;
+  btn.textContent = '⏳ Consultando fitofarmlab.com...';
+  status.textContent = '';
+
+  try {
+    // Usar un proxy CORS para acceder a la página
+    const url = 'https://fitofarmlab.com/lista.php';
+    const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+    const res = await fetch(proxyUrl);
+    if(!res.ok) throw new Error('No se pudo acceder al sitio');
+    const json = await res.json();
+    const html = json.contents;
+
+    // Parsear la tabla HTML
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const filas = doc.querySelectorAll('table tr');
+
+    const conv = CONVERSORES['FITOFARM'];
+    const productos = [];
+    filas.forEach(fila => {
+      const celdas = fila.querySelectorAll('td');
+      if(celdas.length < 4) return;
+      const codWeb  = celdas[0].textContent.trim();
+      const nombre  = celdas[1].textContent.trim();
+      const precioStr = celdas[3].textContent.trim().replace('$','').replace(/\./g,'').replace(',','.');
+      if(!codWeb || !nombre) return;
+      const lista = parseFloat(precioStr);
+      if(isNaN(lista) || lista <= 0) return;
+      const {id, cod} = conv.asignarCodigo(codWeb);
+      productos.push({id, cod, nombre, lista});
+    });
+
+    if(productos.length === 0) throw new Error('No se encontraron productos en la página');
+
+    btn.textContent = '🌐 Obtener lista desde fitofarmlab.com';
+    btn.disabled = false;
+    status.innerHTML = `<span style="color:#1a7a50">✓ ${productos.length} productos obtenidos</span>`;
+    mostrarResultadoConv('FITOFARM', productos, CONVERSORES['FITOFARM'].ganancia, 'fitofarmlab.com');
+
+  } catch(err) {
+    btn.textContent = '🌐 Obtener lista desde fitofarmlab.com';
+    btn.disabled = false;
+    status.innerHTML = `<span style="color:#c00">Error: ${err.message}</span>`;
+  }
+};
+
 window.resetConv = function(){
   document.getElementById('convResult').style.display = 'none';
   document.getElementById('convZone').classList.remove('loaded');
   document.getElementById('convInput').value = '';
   document.getElementById('convProveedor').value = '';
   document.getElementById('convZone').style.display = 'none';
-  document.getElementById('tahonaBarcodesZone').style.display = 'none';
+  document.getElementById('fitofarmZone').style.display = 'none';
+  document.getElementById('fitofarmStatus').textContent = '';
+  document.getElementById('fitofarmBtn').disabled = false;
+  document.getElementById('fitofarmBtn').textContent = '🌐 Obtener lista desde fitofarmlab.com';
   document.getElementById('convZone2').classList.remove('loaded');
   document.getElementById('convInput2').value = '';
   document.getElementById('barcodesStatus').textContent = '';
