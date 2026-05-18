@@ -576,6 +576,8 @@ document.getElementById('convProveedor').addEventListener('change', function(){
 
 // Mapa de códigos de barras de TAHONA (ID → EAN)
 let tahonaBarcodesMap = null;
+// Datos crudos del original de Tahona (para re-aplicar cuando llega el mapa)
+let tahonaRawData = null;
 
 // Leer conversión anterior de TAHONA para extraer códigos de barras
 document.getElementById('convInput2').addEventListener('change', function(e){
@@ -586,25 +588,42 @@ document.getElementById('convInput2').addEventListener('change', function(e){
     try {
       const wb = XLSX.read(ev.target.result, {type:'array'});
       const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:false, blankrows:false});
+      // Leer con raw:true para obtener valores numéricos reales
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true, blankrows:false});
       tahonaBarcodesMap = {};
       let count = 0;
       rows.forEach(row => {
         const idRaw = row[0];
-        const cod   = String(row[1]||'').trim();
-        // Solo guardar si parece un EAN (8-14 dígitos)
-        if(idRaw == null || !cod || !/^\d{8,14}$/.test(cod)) return;
-        // Guardar con el ID tal cual (string) y también sin ceros a la izquierda
+        const codRaw = row[1];
+        if(idRaw == null || codRaw == null || codRaw === '') return;
+        const cod = String(codRaw).trim();
+        if(!/^\d{8,14}$/.test(cod)) return;
+        // Guardar con múltiples formas del ID para cubrir todos los casos
         const idStr = String(idRaw).trim();
         tahonaBarcodesMap[idStr] = cod;
-        // También guardar versión numérica sin ceros iniciales (ej: "0043" → "43")
+        // Sin ceros iniciales: "0043" → "43"
         const idNum = String(parseInt(idStr, 10));
         if(idNum !== idStr) tahonaBarcodesMap[idNum] = cod;
+        // Con ceros hasta 4 dígitos: "43" → "0043"
+        const idPad = idStr.padStart(4, '0');
+        if(idPad !== idStr) tahonaBarcodesMap[idPad] = cod;
         count++;
       });
       document.getElementById('barcodesStatus').innerHTML =
         `<span style="color:#1a7a50">✓ ${count} códigos de barras cargados</span>`;
       document.getElementById('convZone2').classList.add('loaded');
+
+      // Si el original ya fue procesado, re-aplicar los códigos de barras ahora
+      if(tahonaRawData){
+        const conv = CONVERSORES['TAHONA'];
+        const {rows: rawRows, rowsText, cols, fileName} = tahonaRawData;
+        const productos = [];
+        for(let i=cols.headerRow+1; i<rawRows.length; i++){
+          const p = conv.transformar(rawRows[i], rowsText[i]||[], cols, tahonaBarcodesMap);
+          if(p) productos.push(p);
+        }
+        mostrarResultadoConv('TAHONA', productos, conv.ganancia, fileName);
+      }
     } catch(err){
       document.getElementById('barcodesStatus').innerHTML =
         `<span style="color:#c00">Error leyendo el archivo: ${err.message}</span>`;
@@ -784,12 +803,21 @@ document.getElementById('convInput').addEventListener('change', function(e){
           document.getElementById('convResult').style.display = 'block';
           return;
         }
+        // Para TAHONA: guardar datos crudos por si el mapa de barras llega después
+        if(prov === 'TAHONA'){
+          tahonaRawData = {rows, rowsText, cols, fileName: file.name};
+        }
         const productos = [];
         for(let i=cols.headerRow+1; i<rows.length; i++){
           const p = conv.transformar(rows[i], rowsText[i]||[], cols, tahonaBarcodesMap);
           if(p) productos.push(p);
         }
+        // Informar si TAHONA procesó sin mapa de barras todavía
         mostrarResultadoConv(prov, productos, conv.ganancia, file.name);
+        if(prov === 'TAHONA' && !tahonaBarcodesMap){
+          document.getElementById('barcodesStatus').innerHTML =
+            '<span style="color:#f59e0b">⚠ Cargá la conversión anterior para aplicar los códigos de barras</span>';
+        }
       } catch(err) {
         alert('Error leyendo el archivo: ' + err.message);
       }
@@ -858,6 +886,7 @@ window.resetConv = function(){
   document.getElementById('convInput2').value = '';
   document.getElementById('barcodesStatus').textContent = '';
   tahonaBarcodesMap = null;
+  tahonaRawData = null;
   convData = null;
 };
 async function cargarUltimaActualizacion(){
