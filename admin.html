@@ -103,15 +103,16 @@ select:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px r
       <label>Proveedor</label>
       <select id="convProveedor" style="width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;font-size:14px;font-family:'DM Sans',system-ui,sans-serif;background:#f7f7f8;color:#111;outline:none;margin-bottom:0">
         <option value="">— Seleccioná el proveedor —</option>
-        <option value="PROGEN">PROGEN</option>
+        <option value="PROGEN">PROGEN (.xlsx)</option>
+        <option value="NUEVA ESTRELLA">NUEVA ESTRELLA (.pdf)</option>
       </select>
     </div>
 
     <div class="upload-zone" id="convZone" onclick="document.getElementById('convInput').click()" style="display:none">
       <div style="font-size:28px;margin-bottom:8px">📂</div>
       <div class="upload-label"><strong>Hacé clic o arrastrá la lista del proveedor</strong></div>
-      <div class="upload-label" style="margin-top:4px;font-size:11px">Soporta .xlsx</div>
-      <input type="file" id="convInput" accept=".xlsx,.xls" style="display:none">
+      <div class="upload-label" id="convZoneHint" style="margin-top:4px;font-size:11px">Soporta .xlsx y .pdf</div>
+      <input type="file" id="convInput" accept=".xlsx,.xls,.pdf" style="display:none">
     </div>
 
     <div id="convResult" style="display:none">
@@ -340,7 +341,7 @@ window.subirAFirebase = async function(){
 const CONVERSORES = {
   PROGEN: {
     ganancia: 0.5,
-    // Detectar columnas automáticamente según encabezados
+    tipo: 'xlsx',
     detectar(rows) {
       let colId=-1, colCod=-1, colDesc=-1, colLista=-1, headerRow=-1;
       for(let i=0; i<Math.min(rows.length,10); i++){
@@ -360,29 +361,76 @@ const CONVERSORES = {
       }
       return {colId, colCod, colDesc, colLista, headerRow};
     },
-    // Transformar cada fila
     transformar(row, rowText, cols) {
       const {colId, colCod, colDesc, colLista} = cols;
       const desc = String(row[colDesc]||'').trim();
       const lista = parseFloat(row[colLista]);
       if(!desc || desc.length < 2 || isNaN(lista) || lista <= 0) return null;
-      // Código — preservar como texto para EAN-13
       const codRaw = colCod>=0 ? row[colCod] : '';
       const codText = colCod>=0 ? (rowText[colCod]||'') : '';
       const cod = codText ? String(codText).trim() : (codRaw ? String(Math.round(Number(codRaw))) : '');
-      // ID — si existe en la lista
       const idRaw = colId>=0 ? row[colId] : '';
       const idText = colId>=0 ? (rowText[colId]||'') : '';
       const id = idText ? String(idText).trim() : (idRaw ? String(idRaw).trim() : '');
-      // Nombre — agregar " - NUEVO!" si hay nota en columna extra
       let nombre = desc;
-      // Buscar si alguna columna extra dice NUEVO
       for(let i=0; i<row.length; i++){
         if(i===colId||i===colCod||i===colDesc||i===colLista) continue;
         const v = String(row[i]||'').toUpperCase();
         if(v.includes('NUEVO')) { nombre += ' - NUEVO!'; break; }
       }
       return {id, cod, nombre, lista};
+    }
+  },
+
+  'NUEVA ESTRELLA': {
+    ganancia: 0.5,
+    tipo: 'pdf',
+    // Parser de líneas del PDF
+    // Formato: ID(4dig) NOMBRE CODIGO PRECIO
+    // Ejemplo: "2270 ACEITE CANOLA KROL C/OLIVA X250ML 7798127480500 $6950.000"
+    parsearPDF(texto) {
+      const productos = [];
+      const lineas = texto.split('\n');
+
+      // Regex: ID(2-4 dígitos) + NOMBRE + opcionalmente CODIGO(7-13 dígitos) + PRECIO
+      // Precio puede ser: $6950.000 o 12580.000 o $6950 (con o sin $, con o sin decimales)
+      const reLinea = /^(\d{2,4})\s+(.+?)\s+((?:\d{7,14}|2\+\d+|\d{3,4}571\w+))\s+\$?([\d.,]+)$/;
+      const reLineaSinCod = /^(\d{2,4})\s+(.+?)\s+\$?([\d.,]+)$/;
+
+      for(let i=0; i<lineas.length; i++){
+        const linea = lineas[i].trim();
+        if(!linea || linea.length < 10) continue;
+        // Saltar encabezados de rubro
+        if(/^Rubro\s+\d+/i.test(linea)) continue;
+        if(/^Lista de Precios/i.test(linea)) continue;
+        if(/^En Vigencia/i.test(linea)) continue;
+        if(/^Precios/i.test(linea)) continue;
+        if(/^\*{3,}/.test(linea)) continue;
+
+        let m = reLinea.exec(linea);
+        if(m){
+          const id = m[1].padStart(4,'0');
+          const nombre = m[2].trim();
+          const cod = m[3].trim();
+          const lista = parseFloat(m[4].replace(/\./g,'').replace(',','.'));
+          if(lista > 0 && nombre.length > 2){
+            productos.push({id, cod, nombre, lista});
+          }
+          continue;
+        }
+        // Sin código de barras
+        m = reLineaSinCod.exec(linea);
+        if(m){
+          const id = m[1].padStart(4,'0');
+          const nombre = m[2].trim();
+          // Verificar que el "precio" sea razonable (no parte del nombre)
+          const lista = parseFloat(m[3].replace(/\./g,'').replace(',','.'));
+          if(lista > 0 && lista < 10000000 && nombre.length > 2){
+            productos.push({id, cod:'', nombre, lista});
+          }
+        }
+      }
+      return productos;
     }
   }
 };
@@ -392,9 +440,15 @@ let convData = null;
 // Mostrar zona de upload al seleccionar proveedor
 document.getElementById('convProveedor').addEventListener('change', function(){
   const prov = this.value;
+  const conv = CONVERSORES[prov];
   document.getElementById('convZone').style.display = prov ? 'block' : 'none';
   document.getElementById('convResult').style.display = 'none';
   document.getElementById('convInput').value = '';
+  if(conv){
+    const hint = conv.tipo==='pdf' ? 'Soporta .pdf' : 'Soporta .xlsx';
+    document.getElementById('convZoneHint').textContent = hint;
+    document.getElementById('convInput').accept = conv.tipo==='pdf' ? '.pdf' : '.xlsx,.xls';
+  }
   convData = null;
 });
 
@@ -407,45 +461,98 @@ document.getElementById('convInput').addEventListener('change', function(e){
   if(!conv) return;
 
   const reader = new FileReader();
-  reader.onload = ev => {
-    try {
-      const wb = XLSX.read(ev.target.result, {type:'array'});
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true, blankrows:false});
-      const rowsText = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:false, blankrows:false});
 
-      const cols = conv.detectar(rows);
-      if(cols.headerRow < 0){
-        document.getElementById('convStatus').innerHTML = '<span class="badge-err">No se pudo detectar la estructura del archivo</span>';
-        document.getElementById('convResult').style.display = 'block';
-        return;
+  if(conv.tipo === 'pdf'){
+    // Procesar PDF con pdf.js
+    reader.onload = async ev => {
+      try {
+        // Cargar pdf.js dinámicamente
+        if(!window.pdfjsLib){
+          await new Promise((res,rej)=>{
+            const s=document.createElement('script');
+            s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            s.onload=res; s.onerror=rej;
+            document.head.appendChild(s);
+          });
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
+        const pdf = await pdfjsLib.getDocument({data: ev.target.result}).promise;
+        let textoCompleto = '';
+        for(let p=1; p<=pdf.numPages; p++){
+          const page = await pdf.getPage(p);
+          const content = await page.getTextContent();
+          // Reconstruir líneas agrupando items por posición Y
+          const items = content.items.map(it=>({
+            text: it.str,
+            x: Math.round(it.transform[4]),
+            y: Math.round(it.transform[5])
+          }));
+          // Agrupar por Y (misma línea = mismo Y ± 3px)
+          const lineMap = {};
+          items.forEach(it=>{
+            const yKey = Math.round(it.y/3)*3;
+            if(!lineMap[yKey]) lineMap[yKey]=[];
+            lineMap[yKey].push(it);
+          });
+          // Ordenar líneas de arriba a abajo, items de izq a der
+          const ySorted = Object.keys(lineMap).map(Number).sort((a,b)=>b-a);
+          ySorted.forEach(y=>{
+            const lineItems = lineMap[y].sort((a,b)=>a.x-b.x);
+            const lineText = lineItems.map(it=>it.text).join(' ').trim();
+            if(lineText) textoCompleto += lineText + '\n';
+          });
+        }
+
+        const productos = conv.parsearPDF(textoCompleto);
+        mostrarResultadoConv(prov, productos, conv.ganancia, file.name);
+      } catch(err){
+        alert('Error leyendo el PDF: ' + err.message);
       }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    // Procesar Excel (PROGEN)
+    reader.onload = ev => {
+      try {
+        const wb = XLSX.read(ev.target.result, {type:'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true, blankrows:false});
+        const rowsText = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:false, blankrows:false});
 
-      // Convertir productos
-      const productos = [];
-      for(let i=cols.headerRow+1; i<rows.length; i++){
-        const p = conv.transformar(rows[i], rowsText[i]||[], cols);
-        if(p) productos.push(p);
+        const cols = conv.detectar(rows);
+        if(cols.headerRow < 0){
+          document.getElementById('convStatus').innerHTML = '<span class="badge-err">No se pudo detectar la estructura del archivo</span>';
+          document.getElementById('convResult').style.display = 'block';
+          return;
+        }
+        const productos = [];
+        for(let i=cols.headerRow+1; i<rows.length; i++){
+          const p = conv.transformar(rows[i], rowsText[i]||[], cols);
+          if(p) productos.push(p);
+        }
+        mostrarResultadoConv(prov, productos, conv.ganancia, file.name);
+      } catch(err) {
+        alert('Error leyendo el archivo: ' + err.message);
       }
-
-      const mes = new Date().toLocaleString('es-AR',{month:'long',year:'numeric'}).toUpperCase();
-      convData = {prov, productos, ganancia: conv.ganancia, mes};
-
-      document.getElementById('convStatus').innerHTML =
-        `<b>✓ ${productos.length} productos detectados</b> — ${prov} · ${mes}<br>
-        Revisá que el resultado sea correcto antes de descargar.
-        <div class="table-wrap-scroll" style="margin-top:8px">
-        <table><tr><th>ID</th><th>Código</th><th>Producto</th><th>P. Lista</th></tr>
-        ${productos.slice(0,5).map(p=>`<tr><td>${p.id||'—'}</td><td>${p.cod}</td><td>${p.nombre}</td><td>$${Math.round(p.lista).toLocaleString('es-AR')}</td></tr>`).join('')}
-        ${productos.length>5?`<tr><td colspan="4" style="color:#999;font-style:italic">... y ${productos.length-5} productos más</td></tr>`:''}
-        </table></div>`;
-      document.getElementById('convResult').style.display = 'block';
-    } catch(err){
-      alert('Error leyendo el archivo: ' + err.message);
-    }
-  };
-  reader.readAsArrayBuffer(file);
+    };
+    reader.readAsArrayBuffer(file);
+  }
 });
+
+function mostrarResultadoConv(prov, productos, ganancia, fileName){
+  const mes = new Date().toLocaleString('es-AR',{month:'long',year:'numeric'}).toUpperCase();
+  convData = {prov, productos, ganancia, mes};
+  document.getElementById('convStatus').innerHTML =
+    `<b>✓ ${productos.length} productos detectados</b> — ${prov} · ${mes}<br>
+    <div class="table-wrap-scroll" style="margin-top:8px">
+    <table><tr><th>ID</th><th>Código</th><th>Producto</th><th>P. Lista</th></tr>
+    ${productos.slice(0,5).map(p=>`<tr><td>${p.id||'—'}</td><td>${p.cod||'—'}</td><td>${p.nombre}</td><td>$${Math.round(p.lista).toLocaleString('es-AR')}</td></tr>`).join('')}
+    ${productos.length>5?`<tr><td colspan="4" style="color:#999;font-style:italic">... y ${productos.length-5} productos más</td></tr>`:''}
+    </table></div>`;
+  document.getElementById('convResult').style.display = 'block';
+}
 
 // Descargar Excel convertido
 window.descargarConvertido = function(){
