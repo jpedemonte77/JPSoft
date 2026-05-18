@@ -425,9 +425,9 @@ document.getElementById('convProveedor').addEventListener('change', function(){
   document.getElementById('convResult').style.display = 'none';
   document.getElementById('convInput').value = '';
   if(conv){
-    const hint = conv.tipo==='pdf' ? 'Soporta .pdf' : 'Soporta .xlsx';
+    const hint = conv.tipo==='pdf-ocr' ? 'Soporta .pdf' : 'Soporta .xlsx';
     document.getElementById('convZoneHint').textContent = hint;
-    document.getElementById('convInput').accept = conv.tipo==='pdf' ? '.pdf' : '.xlsx,.xls';
+    document.getElementById('convInput').accept = conv.tipo==='pdf-ocr' ? '.pdf' : '.xlsx,.xls';
   }
   convData = null;
 });
@@ -583,9 +583,13 @@ window.descargarConvertido = function(){
   const ws = XLSX.utils.aoa_to_sheet(aoa);
 
   // Formato de código como texto para preservar EAN-13
+  // Formato de moneda $ sin decimales para P. LISTA
   productos.forEach((p, i)=>{
-    const cellRef = XLSX.utils.encode_cell({r: i+5, c: 1});
-    if(ws[cellRef]) ws[cellRef].t = 's';
+    const rowIdx = i + 5;
+    const codRef = XLSX.utils.encode_cell({r: rowIdx, c: 1});
+    if(ws[codRef]) ws[codRef].t = 's';
+    const listaRef = XLSX.utils.encode_cell({r: rowIdx, c: 3});
+    if(ws[listaRef]) ws[listaRef].z = '"$"#,##0';
   });
 
   // Ancho de columnas
