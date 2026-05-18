@@ -769,11 +769,44 @@ function renderCart(){
     return `<div class="cart-item"><div class="ci-top"><div class="ci-desc">${p.desc}</div><button class="ci-remove" onclick="removeFromCart(${i})">x</button></div><div class="ci-bottom"><span class="badge ${badgeClass(p.proveedor)}" style="font-size:9px">${p.proveedor}</span>${controles}<span class="ci-subtotal">${fmtDec(sub)}</span></div><div class="ci-unit-price">${unitPrice}</div></div>`;
   }).join('');
 }
-window.confirmarNuevaVenta=function(){if(Object.keys(cart).length)document.getElementById('modalOverlay').style.display='flex';};
+window.confirmarNuevaVenta=function(){
+  if(!Object.keys(cart).length) return;
+  const now=new Date();
+  const fecha=now.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const hora=now.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+  const keys=Object.keys(cart);
+  const total=keys.reduce((s,k)=>s+calcPrecio(cart[k].product,cart[k].qty,cart[k].gramos),0);
+  document.getElementById('ticketSub').textContent=`${fecha} — ${hora} hs · Total: ${fmtDec(total)}`;
+  let rowsHtml='';
+  keys.forEach(k=>{
+    const{product:p,qty,gramos}=cart[k];
+    const sub=calcPrecio(p,qty,gramos);
+    let detalle=p.desc;
+    if(p.unit==='kg'||p.unit==='100g') detalle+=` ${gramos}g`;
+    else if(qty>1) detalle+=` x${qty}`;
+    rowsHtml+=`<div class="ticket-row"><span class="ticket-name">${detalle}</span><span class="ticket-price">${fmtDec(sub)}</span></div>`;
+  });
+  document.getElementById('ticketPreview').innerHTML=`
+    <div class="ticket-brand">JPSoft | Dietética</div>
+    <div class="ticket-date">${fecha} — ${hora} hs</div>
+    ${rowsHtml}
+    <hr class="ticket-divider">
+    <div class="ticket-total"><span>TOTAL</span><span>${fmtDec(total)}</span></div>`;
+  window._ticketData={fecha,hora,total,keys};
+  document.getElementById('ticketOverlay').style.display='flex';
+};
 
 window.imprimirTicket = function(){
-  const{fecha,hora,total,rows}=window._ticketData||{};
+  const{fecha,hora,total,keys}=window._ticketData||{};
   const win=window.open('','_blank','width=400,height=600');
+  const rowsHtml=keys.map(k=>{
+    const{product:p,qty,gramos}=cart[k];
+    const sub=calcPrecio(p,qty,gramos);
+    let det=p.desc;
+    if(p.unit==='kg'||p.unit==='100g') det+=` ${gramos}g`;
+    else if(qty>1) det+=` x${qty}`;
+    return `<div class="row"><span class="name">${det}</span><span class="price">${fmtDec(sub)}</span></div>`;
+  }).join('');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
     <title>Ticket — JPSoft | Dietética</title>
     <style>
@@ -790,7 +823,7 @@ window.imprimirTicket = function(){
     </style></head><body>
     <div class="brand">JPSoft | Dietética</div>
     <div class="date">${fecha} — ${hora} hs</div>
-    ${rows.replace(/ticket-row/g,'row').replace(/ticket-name/g,'name').replace(/ticket-price/g,'price')}
+    ${rowsHtml}
     <hr class="divider">
     <div class="total"><span>TOTAL</span><span>${fmtDec(total)}</span></div>
   </body></html>`);
@@ -801,18 +834,17 @@ window.imprimirTicket = function(){
 };
 
 window.guardarTicket = function(){
-  const{fecha,hora,total,rows}=window._ticketData||{};
+  const{fecha,hora,total,keys}=window._ticketData||{};
   const fechaFile=fecha.replace(/\//g,'-');
-  const contenido=`JPSoft | Dietética\n${fecha} — ${hora} hs\n\n`+
-    Object.keys(cart).map(k=>{
-      const{product:p,qty,gramos}=cart[k];
-      const sub=calcPrecio(p,qty,gramos);
-      let det=p.desc;
-      if(p.unit==='kg'||p.unit==='100g') det+=` ${gramos}g`;
-      else if(qty>1) det+=` x${qty}`;
-      return `${det.padEnd(35,'.')} ${fmtDec(sub)}`;
-    }).join('\n')+
-    `\n${'─'.repeat(45)}\nTOTAL: ${fmtDec(total)}`;
+  const lineas=keys.map(k=>{
+    const{product:p,qty,gramos}=cart[k];
+    const sub=calcPrecio(p,qty,gramos);
+    let det=p.desc;
+    if(p.unit==='kg'||p.unit==='100g') det+=` ${gramos}g`;
+    else if(qty>1) det+=` x${qty}`;
+    return `${det.padEnd(35,'.')} ${fmtDec(sub)}`;
+  }).join('\n');
+  const contenido=`JPSoft | Dietética\n${fecha} — ${hora} hs\n\n${lineas}\n${'─'.repeat(45)}\nTOTAL: ${fmtDec(total)}`;
   const blob=new Blob([contenido],{type:'text/plain;charset=utf-8'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
