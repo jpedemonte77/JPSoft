@@ -108,7 +108,7 @@ select:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px r
         <option value="POLIMIEL">POLIMIEL (.pdf)</option>
         <option value="TAHONA">TAHONA (.xlsx)</option>
         <option value="G NATURALE">G NATURALE (.xls)</option>
-        <option value="FITOFARM">FITOFARM (web)</option>
+        <option value="FITOFARM">FITOFARM (.pdf)</option>
       </select>
     </div>
 
@@ -130,7 +130,7 @@ select:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px r
       <div id="barcodesStatus" style="font-size:12px;color:#999;margin-top:6px;padding:0 4px"></div>
     </div>
 
-    <!-- Zona especial para FITOFARM (PDF impreso desde el browser) -->
+    <!-- Zona especial para FITOFARM (PDF desde el browser) -->
     <div id="fitofarmZone" style="display:none;margin-top:10px">
       <div class="upload-zone" id="fitofarmUploadZone" onclick="document.getElementById('fitofarmInput').click()">
         <div style="font-size:28px;margin-bottom:8px">🌐</div>
@@ -373,7 +373,6 @@ const CONVERSORES = {
       const lineas = texto.split('\n');
       const skipRe  = /^(Lista de precios|C[oó]digo\s+Nombr|Pr ecio)/i;
       const precioRe = /\$([\d]+\.?\d*)$/;
-      // Código: 3-13 dígitos, pegado o con espacio antes del nombre
       const codRe   = /^(\d{3,13})\s*(.*)/;
       let i = 0;
       while(i < lineas.length) {
@@ -384,7 +383,6 @@ const CONVERSORES = {
         if(!mc) continue;
         const cod  = mc[1];
         let resto  = mc[2].trim();
-        // Concatenar líneas siguientes si falta el precio
         for(let k=0; k<3; k++){
           if(precioRe.test(resto)) break;
           if(i >= lineas.length) break;
@@ -398,7 +396,6 @@ const CONVERSORES = {
         if(lista <= 0) continue;
         const nombre = resto.slice(0, mp.index).replace(/\s+/g,' ').trim();
         if(!nombre) continue;
-        // Código largo (≥10 dígitos) → CODIGO; corto → ID
         const id  = cod.length >= 10 ? '' : cod;
         const ean = cod.length >= 10 ? cod : '';
         productos.push({id, cod: ean, nombre, lista});
@@ -646,16 +643,16 @@ let convData = null;
 document.getElementById('convProveedor').addEventListener('change', function(){
   const prov = this.value;
   const conv = CONVERSORES[prov];
-  const esWeb = conv && conv.tipo === 'web';
-  document.getElementById('convZone').style.display = (prov && !esWeb) ? 'block' : 'none';
+  const esFitofarm = prov === 'FITOFARM';
+  document.getElementById('convZone').style.display = (prov && !esFitofarm) ? 'block' : 'none';
   document.getElementById('convResult').style.display = 'none';
   document.getElementById('convInput').value = '';
   document.getElementById('tahonaBarcodesZone').style.display = prov==='TAHONA' ? 'block' : 'none';
-  document.getElementById('fitofarmZone').style.display = esWeb ? 'block' : 'none';
+  document.getElementById('fitofarmZone').style.display = esFitofarm ? 'block' : 'none';
   document.getElementById('fitofarmStatus').textContent = '';
   document.getElementById('barcodesStatus').textContent = '';
   tahonaBarcodesMap = null;
-  if(conv && !esWeb){
+  if(conv && !esFitofarm){
     const esPdf = conv.tipo==='pdf-ocr' || conv.tipo==='pdf-native';
     document.getElementById('convZoneHint').textContent = esPdf ? 'Soporta .pdf' : 'Soporta .xlsx / .xls';
     document.getElementById('convInput').accept = esPdf ? '.pdf' : '.xlsx,.xls';
