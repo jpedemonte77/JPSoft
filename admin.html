@@ -130,9 +130,14 @@ select:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px r
       <div id="barcodesStatus" style="font-size:12px;color:#999;margin-top:6px;padding:0 4px"></div>
     </div>
 
-    <!-- Zona especial para FITOFARM (fetch desde la web) -->
+    <!-- Zona especial para FITOFARM (PDF impreso desde el browser) -->
     <div id="fitofarmZone" style="display:none;margin-top:10px">
-      <button class="btn" id="fitofarmBtn" onclick="fetchFitofarm()">🌐 Obtener lista desde fitofarmlab.com</button>
+      <div class="upload-zone" id="fitofarmUploadZone" onclick="document.getElementById('fitofarmInput').click()">
+        <div style="font-size:28px;margin-bottom:8px">🌐</div>
+        <div class="upload-label"><strong>Subí la lista de Fitofarm en PDF</strong></div>
+        <div class="upload-label" style="margin-top:4px;font-size:11px">Entrá a fitofarmlab.com/lista.php → Imprimir → Guardar como PDF</div>
+        <input type="file" id="fitofarmInput" accept=".pdf" style="display:none">
+      </div>
       <div id="fitofarmStatus" style="font-size:12px;color:#999;margin-top:8px;padding:0 4px"></div>
     </div>
 
@@ -362,15 +367,43 @@ window.subirAFirebase = async function(){
 const CONVERSORES = {
   FITOFARM: {
     ganancia: 0.2,
-    tipo: 'web',
-    url: 'https://fitofarmlab.com/lista.php',
-    // Código largo (EAN, ≥10 dígitos) → CODIGO; código corto (interno) → ID
-    asignarCodigo(codWeb) {
-      const soloDigitos = /^\d+$/.test(codWeb);
-      if(soloDigitos && codWeb.length >= 10) {
-        return {id: '', cod: codWeb};
+    tipo: 'pdf-native',
+    parsearTextoPDF(texto) {
+      const productos = [];
+      const lineas = texto.split('\n');
+      const skipRe  = /^(Lista de precios|C[oó]digo\s+Nombr|Pr ecio)/i;
+      const precioRe = /\$([\d]+\.?\d*)$/;
+      // Código: 3-13 dígitos, pegado o con espacio antes del nombre
+      const codRe   = /^(\d{3,13})\s*(.*)/;
+      let i = 0;
+      while(i < lineas.length) {
+        const linea = lineas[i].trim();
+        i++;
+        if(!linea || skipRe.test(linea)) continue;
+        const mc = codRe.exec(linea);
+        if(!mc) continue;
+        const cod  = mc[1];
+        let resto  = mc[2].trim();
+        // Concatenar líneas siguientes si falta el precio
+        for(let k=0; k<3; k++){
+          if(precioRe.test(resto)) break;
+          if(i >= lineas.length) break;
+          const sig = lineas[i].trim();
+          if(sig && !skipRe.test(sig) && !codRe.test(sig)){ resto += ' ' + sig; i++; }
+          else break;
+        }
+        const mp = precioRe.exec(resto);
+        if(!mp) continue;
+        const lista = parseFloat(mp[1]);
+        if(lista <= 0) continue;
+        const nombre = resto.slice(0, mp.index).replace(/\s+/g,' ').trim();
+        if(!nombre) continue;
+        // Código largo (≥10 dígitos) → CODIGO; corto → ID
+        const id  = cod.length >= 10 ? '' : cod;
+        const ean = cod.length >= 10 ? cod : '';
+        productos.push({id, cod: ean, nombre, lista});
       }
-      return {id: codWeb, cod: ''};
+      return productos;
     }
   },
 
@@ -934,56 +967,71 @@ window.descargarConvertido = function(){
   XLSX.writeFile(wb, `${prov}_convertido_${fechaStr}.xlsx`);
 };
 
-// ── FITOFARM: obtener lista desde la web ──
-window.fetchFitofarm = async function(){
-  const btn = document.getElementById('fitofarmBtn');
-  const status = document.getElementById('fitofarmStatus');
-  btn.disabled = true;
-  btn.textContent = '⏳ Consultando fitofarmlab.com...';
-  status.textContent = '';
+// ── FITOFARM: leer PDF guardado desde el browser ──
+document.getElementById('fitofarmInput').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const conv = CONVERSORES['FITOFARM'];
+  const reader = new FileReader();
 
-  try {
-    // Usar un proxy CORS para acceder a la página
-    const url = 'https://fitofarmlab.com/lista.php';
-    const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
-    const res = await fetch(proxyUrl);
-    if(!res.ok) throw new Error('No se pudo acceder al sitio');
-    const json = await res.json();
-    const html = json.contents;
+  document.getElementById('convResult').style.display = 'block';
+  document.getElementById('convBtn').style.display = 'none';
+  document.getElementById('convStatus').innerHTML = `
+    <b>Leyendo PDF de Fitofarm...</b><br>
+    <div style="margin-top:8px;background:#f0f0f0;border-radius:6px;overflow:hidden;height:10px">
+      <div id="ocrBar" style="height:10px;background:#111;width:0%;transition:width .3s;border-radius:6px"></div>
+    </div>
+    <div id="ocrMsg" style="font-size:12px;color:#999;margin-top:6px">Cargando pdf.js...</div>`;
 
-    // Parsear la tabla HTML
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    const filas = doc.querySelectorAll('table tr');
-
-    const conv = CONVERSORES['FITOFARM'];
-    const productos = [];
-    filas.forEach(fila => {
-      const celdas = fila.querySelectorAll('td');
-      if(celdas.length < 4) return;
-      const codWeb  = celdas[0].textContent.trim();
-      const nombre  = celdas[1].textContent.trim();
-      const precioStr = celdas[3].textContent.trim().replace('$','').replace(/\./g,'').replace(',','.');
-      if(!codWeb || !nombre) return;
-      const lista = parseFloat(precioStr);
-      if(isNaN(lista) || lista <= 0) return;
-      const {id, cod} = conv.asignarCodigo(codWeb);
-      productos.push({id, cod, nombre, lista});
-    });
-
-    if(productos.length === 0) throw new Error('No se encontraron productos en la página');
-
-    btn.textContent = '🌐 Obtener lista desde fitofarmlab.com';
-    btn.disabled = false;
-    status.innerHTML = `<span style="color:#1a7a50">✓ ${productos.length} productos obtenidos</span>`;
-    mostrarResultadoConv('FITOFARM', productos, CONVERSORES['FITOFARM'].ganancia, 'fitofarmlab.com');
-
-  } catch(err) {
-    btn.textContent = '🌐 Obtener lista desde fitofarmlab.com';
-    btn.disabled = false;
-    status.innerHTML = `<span style="color:#c00">Error: ${err.message}</span>`;
-  }
-};
+  reader.onload = async ev => {
+    try {
+      if(!window.pdfjsLib){
+        await new Promise((res,rej)=>{
+          const s=document.createElement('script');
+          s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+          s.onload=res; s.onerror=rej;
+          document.head.appendChild(s);
+        });
+        pdfjsLib.GlobalWorkerOptions.workerSrc=
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+      const setMsg = txt => document.getElementById('ocrMsg').textContent = txt;
+      const setBar = pct => document.getElementById('ocrBar').style.width = pct+'%';
+      setMsg('Abriendo PDF...');
+      const pdf = await pdfjsLib.getDocument({data: ev.target.result}).promise;
+      const total = pdf.numPages;
+      let textoCompleto = '';
+      for(let p=1; p<=total; p++){
+        setMsg(`Extrayendo página ${p} de ${total}...`);
+        setBar(Math.round(p/total*100));
+        const page = await pdf.getPage(p);
+        const content = await page.getTextContent();
+        let lastY = null, linea = '';
+        const pageLines = [];
+        for(const item of content.items){
+          if(lastY !== null && Math.abs(item.transform[5] - lastY) > 2){
+            pageLines.push(linea); linea = item.str;
+          } else { linea += item.str; }
+          lastY = item.transform[5];
+        }
+        if(linea) pageLines.push(linea);
+        textoCompleto += pageLines.join('\n') + '\n';
+      }
+      setBar(100);
+      setMsg('Analizando...');
+      const productos = conv.parsearTextoPDF(textoCompleto);
+      document.getElementById('fitofarmUploadZone').classList.add('loaded');
+      document.getElementById('fitofarmStatus').innerHTML =
+        `<span style="color:#1a7a50">✓ ${productos.length} productos detectados</span>`;
+      document.getElementById('convBtn').style.display = 'block';
+      mostrarResultadoConv('FITOFARM', productos, conv.ganancia, file.name);
+    } catch(err){
+      document.getElementById('convStatus').innerHTML =
+        `<span style="color:#c00">Error: ${err.message}</span>`;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
 
 window.resetConv = function(){
   document.getElementById('convResult').style.display = 'none';
@@ -993,8 +1041,8 @@ window.resetConv = function(){
   document.getElementById('convZone').style.display = 'none';
   document.getElementById('fitofarmZone').style.display = 'none';
   document.getElementById('fitofarmStatus').textContent = '';
-  document.getElementById('fitofarmBtn').disabled = false;
-  document.getElementById('fitofarmBtn').textContent = '🌐 Obtener lista desde fitofarmlab.com';
+  document.getElementById('fitofarmUploadZone').classList.remove('loaded');
+  document.getElementById('fitofarmInput').value = '';
   document.getElementById('convZone2').classList.remove('loaded');
   document.getElementById('convInput2').value = '';
   document.getElementById('barcodesStatus').textContent = '';
