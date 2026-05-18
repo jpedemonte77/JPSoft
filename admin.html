@@ -106,7 +106,6 @@ select:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px r
         <option value="PROGEN">PROGEN (.xlsx)</option>
         <option value="NUEVA ESTRELLA">NUEVA ESTRELLA (.pdf)</option>
         <option value="POLIMIEL">POLIMIEL (.pdf)</option>
-        <option value="XANTANA">XANTANA (.xlsx)</option>
       </select>
     </div>
 
@@ -381,37 +380,6 @@ const CONVERSORES = {
         if(v.includes('NUEVO')) { nombre += ' - NUEVO!'; break; }
       }
       return {id, cod, nombre, lista};
-    }
-  },
-
-  XANTANA: {
-    ganancia: 0.5,
-    tipo: 'xlsx',
-    detectar(rows) {
-      let colCod=-1, colDesc=-1, colLista=-1, headerRow=-1;
-      for(let i=0; i<Math.min(rows.length,10); i++){
-        const r = rows[i].map(c=>String(c||'').toUpperCase().trim());
-        const tieneProd  = r.some(c=>c.includes('NOMBRE')||c.includes('PRODUCTO')||c.includes('DESC'));
-        const tienePrecio = r.some(c=>c.includes('LISTA')||c.includes('PRECIO'));
-        if(tieneProd && tienePrecio){
-          headerRow = i;
-          r.forEach((c,idx)=>{
-            if(colCod<0  && (c.includes('COD')||c.includes('CODIGO'))) colCod=idx;
-            if(colDesc<0 && (c.includes('NOMBRE')||c.includes('PRODUCTO')||c.includes('DESC'))) colDesc=idx;
-            if(colLista<0 && (c.includes('LISTA')||c.includes('PRECIO'))) colLista=idx;
-          });
-          break;
-        }
-      }
-      return {colId:-1, colCod, colDesc, colLista, headerRow};
-    },
-    transformar(row, rowText, cols) {
-      const {colDesc, colLista} = cols;
-      const desc  = String(row[colDesc]||'').trim();
-      const lista = parseFloat(row[colLista]);
-      // Omitir encabezados de sección, sin precio y discontinuados
-      if(!desc || desc.length < 3 || isNaN(lista) || lista <= 0) return null;
-      return {id:'', cod:'', nombre:desc, lista};
     }
   },
 
