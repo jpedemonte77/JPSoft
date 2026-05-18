@@ -107,6 +107,7 @@ select:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px r
         <option value="NUEVA ESTRELLA">NUEVA ESTRELLA (.pdf)</option>
         <option value="POLIMIEL">POLIMIEL (.pdf)</option>
         <option value="TAHONA">TAHONA (.xlsx)</option>
+        <option value="G NATURALE">G NATURALE (.xls)</option>
       </select>
     </div>
 
@@ -395,6 +396,37 @@ const CONVERSORES = {
     }
   },
 
+  'G NATURALE': {
+    ganancia: 0.6,
+    tipo: 'xls',
+    detectar(rows) {
+      // Estructura: CÓDIGO | DESCRIPCIÓN | $ VENTA
+      // Fila de encabezado tiene exactamente esas palabras
+      let headerRow = -1;
+      for(let i=0; i<Math.min(rows.length, 15); i++){
+        const r = rows[i].map(c=>String(c||'').toUpperCase().trim());
+        if(r.some(c=>c.includes('DESCRIPCI')) && r.some(c=>c.includes('VENTA'))){
+          headerRow = i;
+          break;
+        }
+      }
+      // Columnas fijas: 0=código, 1=descripción, 2=precio
+      return {headerRow, colCod:0, colDesc:1, colLista:2};
+    },
+    transformar(row) {
+      const cod  = String(row[0]||'').trim();
+      const desc = String(row[1]||'').trim();
+      const precioRaw = String(row[2]||'').trim();
+      // Saltar filas sin descripción o sin precio válido
+      if(!cod || !desc || !precioRaw) return null;
+      const lista = parseFloat(precioRaw);
+      if(isNaN(lista) || lista <= 0) return null;
+      // Saltar fila de encabezado por si queda
+      if(cod.toUpperCase() === 'CÓDIGO' || cod.toUpperCase() === 'CODIGO') return null;
+      return {id: '', cod, nombre: desc, lista};
+    }
+  },
+
   TAHONA: {
     ganancia: 0.5,
     tipo: 'xlsx',
@@ -568,7 +600,7 @@ document.getElementById('convProveedor').addEventListener('change', function(){
   tahonaBarcodesMap = null;
   if(conv){
     const esPdf = conv.tipo==='pdf-ocr' || conv.tipo==='pdf-native';
-    document.getElementById('convZoneHint').textContent = esPdf ? 'Soporta .pdf' : 'Soporta .xlsx';
+    document.getElementById('convZoneHint').textContent = esPdf ? 'Soporta .pdf' : 'Soporta .xlsx / .xls';
     document.getElementById('convInput').accept = esPdf ? '.pdf' : '.xlsx,.xls';
   }
   convData = null;
@@ -789,7 +821,7 @@ document.getElementById('convInput').addEventListener('change', function(e){
     };
     reader.readAsArrayBuffer(file);
   } else {
-    // Procesar Excel (PROGEN)
+    // Procesar Excel (.xlsx o .xls)
     reader.onload = ev => {
       try {
         const wb = XLSX.read(ev.target.result, {type:'array'});
@@ -809,7 +841,10 @@ document.getElementById('convInput').addEventListener('change', function(e){
         }
         const productos = [];
         for(let i=cols.headerRow+1; i<rows.length; i++){
-          const p = conv.transformar(rows[i], rowsText[i]||[], cols, tahonaBarcodesMap);
+          // G NATURALE usa firma simplificada (solo row); otros usan (row, rowText, cols, barcodesMap)
+          const p = conv.tipo === 'xls'
+            ? conv.transformar(rows[i])
+            : conv.transformar(rows[i], rowsText[i]||[], cols, tahonaBarcodesMap);
           if(p) productos.push(p);
         }
         // Informar si TAHONA procesó sin mapa de barras todavía
