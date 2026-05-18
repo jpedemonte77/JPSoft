@@ -42,6 +42,8 @@ table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
 th{font-size:11px;font-weight:500;color:#999;text-align:left;padding:6px 10px;border-bottom:1px solid rgba(0,0,0,0.06);background:#f7f7f8}
 td{padding:6px 10px;border-bottom:1px solid rgba(0,0,0,0.04);color:#111}
 tr:last-child td{border-bottom:none}
+select{appearance:none;-webkit-appearance:none;cursor:pointer}
+select:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px rgba(0,0,0,0.05)}
 @media(max-width:480px){
   #loginWrap,#adminWrap{padding:.5rem}
   .card{padding:1.25rem}
@@ -89,6 +91,33 @@ tr:last-child td{border-bottom:none}
 
     <div id="lastUpdate" style="display:none;margin-top:1rem">
       <div class="status-box" id="lastUpdateBox"></div>
+    </div>
+  </div>
+
+  <!-- CONVERSOR -->
+  <div class="card" style="margin-top:1rem">
+    <div class="brand">Conversor de listas de proveedores</div>
+    <div class="sub">Importá la lista original del proveedor y generá el Excel listo para el libro maestro</div>
+
+    <div style="margin-bottom:1rem">
+      <label>Proveedor</label>
+      <select id="convProveedor" style="width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;font-size:14px;font-family:'DM Sans',system-ui,sans-serif;background:#f7f7f8;color:#111;outline:none;margin-bottom:0">
+        <option value="">— Seleccioná el proveedor —</option>
+        <option value="PROGEN">PROGEN</option>
+      </select>
+    </div>
+
+    <div class="upload-zone" id="convZone" onclick="document.getElementById('convInput').click()" style="display:none">
+      <div style="font-size:28px;margin-bottom:8px">📂</div>
+      <div class="upload-label"><strong>Hacé clic o arrastrá la lista del proveedor</strong></div>
+      <div class="upload-label" style="margin-top:4px;font-size:11px">Soporta .xlsx</div>
+      <input type="file" id="convInput" accept=".xlsx,.xls" style="display:none">
+    </div>
+
+    <div id="convResult" style="display:none">
+      <div class="status-box" id="convStatus"></div>
+      <button class="btn" id="convBtn" onclick="descargarConvertido()" style="margin-top:1rem">⬇ Descargar Excel convertido</button>
+      <button class="btn btn-outline" onclick="resetConv()" style="margin-top:8px">Cancelar</button>
     </div>
   </div>
 </div>
@@ -305,7 +334,159 @@ window.subirAFirebase = async function(){
   }
 };
 
-// ── Última actualización ──
+// ── CONVERSOR DE LISTAS ──
+
+// Configuración por proveedor
+const CONVERSORES = {
+  PROGEN: {
+    ganancia: 0.5,
+    // Detectar columnas automáticamente según encabezados
+    detectar(rows) {
+      let colId=-1, colCod=-1, colDesc=-1, colLista=-1, headerRow=-1;
+      for(let i=0; i<Math.min(rows.length,10); i++){
+        const r = rows[i].map(c=>String(c||'').toUpperCase().trim());
+        const tieneProd = r.some(c=>c.includes('PRODUCTO')||c.includes('NOMBRE')||c.includes('DESC'));
+        const tienePrecio = r.some(c=>c.includes('COMERCIO')||c.includes('LISTA')||c.includes('PRECIO'));
+        if(tieneProd && tienePrecio){
+          headerRow = i;
+          r.forEach((c,idx)=>{
+            if(colId<0 && c==='ID') colId=idx;
+            if(colCod<0 && (c.includes('COD')||c.includes('CODIGO')||c.includes('CÓDIGO'))) colCod=idx;
+            if(colDesc<0 && (c.includes('PRODUCTO')||c.includes('NOMBRE')||c.includes('DESC'))) colDesc=idx;
+            if(colLista<0 && (c.includes('COMERCIO')||c.includes('LISTA')||c.includes('PRECIO'))) colLista=idx;
+          });
+          break;
+        }
+      }
+      return {colId, colCod, colDesc, colLista, headerRow};
+    },
+    // Transformar cada fila
+    transformar(row, rowText, cols) {
+      const {colId, colCod, colDesc, colLista} = cols;
+      const desc = String(row[colDesc]||'').trim();
+      const lista = parseFloat(row[colLista]);
+      if(!desc || desc.length < 2 || isNaN(lista) || lista <= 0) return null;
+      // Código — preservar como texto para EAN-13
+      const codRaw = colCod>=0 ? row[colCod] : '';
+      const codText = colCod>=0 ? (rowText[colCod]||'') : '';
+      const cod = codText ? String(codText).trim() : (codRaw ? String(Math.round(Number(codRaw))) : '');
+      // ID — si existe en la lista
+      const idRaw = colId>=0 ? row[colId] : '';
+      const idText = colId>=0 ? (rowText[colId]||'') : '';
+      const id = idText ? String(idText).trim() : (idRaw ? String(idRaw).trim() : '');
+      // Nombre — agregar " - NUEVO!" si hay nota en columna extra
+      let nombre = desc;
+      // Buscar si alguna columna extra dice NUEVO
+      for(let i=0; i<row.length; i++){
+        if(i===colId||i===colCod||i===colDesc||i===colLista) continue;
+        const v = String(row[i]||'').toUpperCase();
+        if(v.includes('NUEVO')) { nombre += ' - NUEVO!'; break; }
+      }
+      return {id, cod, nombre, lista};
+    }
+  }
+};
+
+let convData = null;
+
+// Mostrar zona de upload al seleccionar proveedor
+document.getElementById('convProveedor').addEventListener('change', function(){
+  const prov = this.value;
+  document.getElementById('convZone').style.display = prov ? 'block' : 'none';
+  document.getElementById('convResult').style.display = 'none';
+  document.getElementById('convInput').value = '';
+  convData = null;
+});
+
+// Procesar archivo
+document.getElementById('convInput').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const prov = document.getElementById('convProveedor').value;
+  const conv = CONVERSORES[prov];
+  if(!conv) return;
+
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const wb = XLSX.read(ev.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true, blankrows:false});
+      const rowsText = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:false, blankrows:false});
+
+      const cols = conv.detectar(rows);
+      if(cols.headerRow < 0){
+        document.getElementById('convStatus').innerHTML = '<span class="badge-err">No se pudo detectar la estructura del archivo</span>';
+        document.getElementById('convResult').style.display = 'block';
+        return;
+      }
+
+      // Convertir productos
+      const productos = [];
+      for(let i=cols.headerRow+1; i<rows.length; i++){
+        const p = conv.transformar(rows[i], rowsText[i]||[], cols);
+        if(p) productos.push(p);
+      }
+
+      const mes = new Date().toLocaleString('es-AR',{month:'long',year:'numeric'}).toUpperCase();
+      convData = {prov, productos, ganancia: conv.ganancia, mes};
+
+      document.getElementById('convStatus').innerHTML =
+        `<b>✓ ${productos.length} productos detectados</b> — ${prov} · ${mes}<br>
+        Revisá que el resultado sea correcto antes de descargar.
+        <div class="table-wrap-scroll" style="margin-top:8px">
+        <table><tr><th>ID</th><th>Código</th><th>Producto</th><th>P. Lista</th></tr>
+        ${productos.slice(0,5).map(p=>`<tr><td>${p.id||'—'}</td><td>${p.cod}</td><td>${p.nombre}</td><td>$${Math.round(p.lista).toLocaleString('es-AR')}</td></tr>`).join('')}
+        ${productos.length>5?`<tr><td colspan="4" style="color:#999;font-style:italic">... y ${productos.length-5} productos más</td></tr>`:''}
+        </table></div>`;
+      document.getElementById('convResult').style.display = 'block';
+    } catch(err){
+      alert('Error leyendo el archivo: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+// Descargar Excel convertido
+window.descargarConvertido = function(){
+  if(!convData) return;
+  const {prov, productos, ganancia, mes} = convData;
+  const wb = XLSX.utils.book_new();
+
+  // Construir filas en el formato del libro maestro
+  const aoa = [
+    [prov, mes, null, null, null],
+    [null, null, null, null, null],
+    [null, null, null, '% GANANCIA:', null],
+    [null, null, null, ganancia, null],
+    ['ID', 'CODIGO', 'PRODUCTO', 'P. LISTA', 'P. VENTA'],
+    ...productos.map(p=>[p.id||null, p.cod, p.nombre, p.lista, null])
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  // Formato de código como texto para preservar EAN-13
+  productos.forEach((p, i)=>{
+    const cellRef = XLSX.utils.encode_cell({r: i+5, c: 1});
+    if(ws[cellRef]) ws[cellRef].t = 's';
+  });
+
+  // Ancho de columnas
+  ws['!cols'] = [{wch:8},{wch:16},{wch:45},{wch:12},{wch:12}];
+
+  XLSX.utils.book_append_sheet(wb, ws, prov);
+  const fechaStr = new Date().toLocaleDateString('es-AR').replace(/\//g,'-');
+  XLSX.writeFile(wb, `${prov}_convertido_${fechaStr}.xlsx`);
+};
+
+window.resetConv = function(){
+  document.getElementById('convResult').style.display = 'none';
+  document.getElementById('convZone').classList.remove('loaded');
+  document.getElementById('convInput').value = '';
+  document.getElementById('convProveedor').value = '';
+  document.getElementById('convZone').style.display = 'none';
+  convData = null;
+};
 async function cargarUltimaActualizacion(){
   try {
     const snap = await get(ref(db, 'gestor/updatedAt'));
