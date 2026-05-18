@@ -1006,12 +1006,23 @@ document.getElementById('fitofarmInput').addEventListener('change', function(e){
         let lastY = null, linea = '';
         const pageLines = [];
         for(const item of content.items){
-          if(lastY !== null && Math.abs(item.transform[5] - lastY) > 2){
-            pageLines.push(linea); linea = item.str;
-          } else { linea += item.str; }
+          if(!item.str) continue;
+          if(lastY !== null && Math.abs(item.transform[5] - lastY) > 4){
+            // Nueva línea
+            if(linea.trim()) pageLines.push(linea.trim());
+            linea = item.str;
+          } else {
+            // Mismo renglón — agregar espacio si el item anterior no termina en espacio
+            // y el nuevo no empieza en espacio
+            if(linea && !linea.endsWith(' ') && !item.str.startsWith(' ')){
+              linea += ' ' + item.str;
+            } else {
+              linea += item.str;
+            }
+          }
           lastY = item.transform[5];
         }
-        if(linea) pageLines.push(linea);
+        if(linea.trim()) pageLines.push(linea.trim());
         textoCompleto += pageLines.join('\n') + '\n';
       }
       setBar(100);
