@@ -105,6 +105,7 @@ select:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px r
         <option value="">— Seleccioná el proveedor —</option>
         <option value="PROGEN">PROGEN (.xlsx)</option>
         <option value="NUEVA ESTRELLA">NUEVA ESTRELLA (.pdf)</option>
+        <option value="POLIMIEL">POLIMIEL (.pdf)</option>
       </select>
     </div>
 
@@ -382,6 +383,88 @@ const CONVERSORES = {
     }
   },
 
+  POLIMIEL: {
+    ganancia: 0.5,
+    tipo: 'pdf-native',
+
+    parsearTextoPDF(texto) {
+      const productos = [];
+      const lineas = texto.split('\n');
+
+      // Regex auxiliares
+      const skipRe = /^(LISTA DE PRECIOS|precios sujetos|COD\s+DESCRIPCION|P[aá]gina\s+\d+)/i;
+      const precioRe = /([\d.]+,\d{2})$/;
+      const unidRe  = /\s+(c\/u|kg)\s+([\d.]+,\d{2})$/;
+      const soloCodigoRe = /^(\d+)$/;
+      const inlineRe    = /^(\d+)\s+(.+)/;
+
+      const parsePrecio = s => parseFloat(s.replace(/\./g, '').replace(',', '.'));
+
+      let i = 0;
+      while (i < lineas.length) {
+        const linea = lineas[i].trim();
+        i++;
+
+        if (!linea || skipRe.test(linea)) continue;
+
+        let cod = '', resto = '';
+
+        const mSolo = soloCodigoRe.exec(linea);
+        const mInline = inlineRe.exec(linea);
+
+        if (mSolo) {
+          cod   = mSolo[1];
+          resto = '';
+          // Concatenar líneas siguientes hasta tener precio
+          for (let k = 0; k < 4; k++) {
+            if (i >= lineas.length) break;
+            const sig = lineas[i].trim();
+            if (/^\d+[\s$]/.test(sig) || soloCodigoRe.test(sig)) break;
+            if (sig && !skipRe.test(sig)) { resto = (resto + ' ' + sig).trim(); i++; }
+            else break;
+            if (precioRe.test(resto)) break;
+          }
+        } else if (mInline) {
+          cod   = mInline[1];
+          resto = mInline[2].trim();
+          // Continuar si el precio no está al final
+          for (let k = 0; k < 3; k++) {
+            if (precioRe.test(resto)) break;
+            if (i >= lineas.length) break;
+            const sig = lineas[i].trim();
+            if (/^\d+[\s$]/.test(sig) || soloCodigoRe.test(sig)) break;
+            if (sig && !skipRe.test(sig)) { resto = (resto + ' ' + sig).trim(); i++; }
+            else break;
+          }
+        } else {
+          continue;
+        }
+
+        // Extraer nombre y precio
+        const mu = unidRe.exec(resto);
+        let nombre, precioStr;
+        if (mu) {
+          precioStr = mu[2];
+          nombre    = resto.slice(0, mu.index).trim();
+        } else {
+          const mp = precioRe.exec(resto);
+          if (!mp) continue;
+          precioStr = mp[1];
+          nombre    = resto.slice(0, mp.index).trim();
+        }
+
+        const lista = parsePrecio(precioStr);
+        if (lista <= 0) continue; // omite secciones y sin-stock
+
+        nombre = nombre.replace(/\s+/g, ' ').trim();
+        if (nombre.length < 2) continue;
+
+        productos.push({ id: cod, cod: '', nombre, lista });
+      }
+      return productos;
+    }
+  },
+
   'NUEVA ESTRELLA': {
     ganancia: 0.5,
     tipo: 'pdf-ocr',
@@ -425,9 +508,9 @@ document.getElementById('convProveedor').addEventListener('change', function(){
   document.getElementById('convResult').style.display = 'none';
   document.getElementById('convInput').value = '';
   if(conv){
-    const hint = conv.tipo==='pdf-ocr' ? 'Soporta .pdf' : 'Soporta .xlsx';
-    document.getElementById('convZoneHint').textContent = hint;
-    document.getElementById('convInput').accept = conv.tipo==='pdf-ocr' ? '.pdf' : '.xlsx,.xls';
+    const esPdf = conv.tipo==='pdf-ocr' || conv.tipo==='pdf-native';
+    document.getElementById('convZoneHint').textContent = esPdf ? 'Soporta .pdf' : 'Soporta .xlsx';
+    document.getElementById('convInput').accept = esPdf ? '.pdf' : '.xlsx,.xls';
   }
   convData = null;
 });
@@ -442,7 +525,73 @@ document.getElementById('convInput').addEventListener('change', function(e){
 
   const reader = new FileReader();
 
-  if(conv.tipo === 'pdf-ocr'){
+  if(conv.tipo === 'pdf-native'){
+    // PDF con texto nativo — usa pdf.js para extraer texto sin OCR
+    document.getElementById('convResult').style.display = 'block';
+    document.getElementById('convBtn').style.display = 'none';
+    document.getElementById('convStatus').innerHTML = `
+      <b>Leyendo PDF...</b><br>
+      <div style="margin-top:8px;background:#f0f0f0;border-radius:6px;overflow:hidden;height:10px">
+        <div id="ocrBar" style="height:10px;background:#111;width:0%;transition:width .3s;border-radius:6px"></div>
+      </div>
+      <div id="ocrMsg" style="font-size:12px;color:#999;margin-top:6px">Cargando pdf.js...</div>`;
+
+    reader.onload = async ev => {
+      try {
+        if(!window.pdfjsLib){
+          await new Promise((res,rej)=>{
+            const s=document.createElement('script');
+            s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            s.onload=res; s.onerror=rej;
+            document.head.appendChild(s);
+          });
+          pdfjsLib.GlobalWorkerOptions.workerSrc=
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
+        const setMsg = txt => document.getElementById('ocrMsg').textContent = txt;
+        const setBar = pct => document.getElementById('ocrBar').style.width = pct+'%';
+
+        setMsg('Abriendo PDF...');
+        const pdf = await pdfjsLib.getDocument({data: ev.target.result}).promise;
+        const total = pdf.numPages;
+        let textoCompleto = '';
+
+        for(let p=1; p<=total; p++){
+          setMsg(`Extrayendo página ${p} de ${total}...`);
+          setBar(Math.round(p/total*100));
+          const page = await pdf.getPage(p);
+          const content = await page.getTextContent();
+          // Reconstruir texto línea a línea preservando saltos
+          let lastY = null, linea = '';
+          const pageLines = [];
+          for(const item of content.items){
+            if(lastY !== null && Math.abs(item.transform[5] - lastY) > 2){
+              pageLines.push(linea);
+              linea = item.str;
+            } else {
+              linea += item.str;
+            }
+            lastY = item.transform[5];
+          }
+          if(linea) pageLines.push(linea);
+          textoCompleto += pageLines.join('\n') + '\n';
+        }
+
+        setBar(100);
+        setMsg('Analizando...');
+        const productos = conv.parsearTextoPDF(textoCompleto);
+        document.getElementById('convBtn').style.display = 'block';
+        mostrarResultadoConv(prov, productos, conv.ganancia, file.name);
+
+      } catch(err){
+        document.getElementById('convStatus').innerHTML =
+          `<span style="color:#c00">Error: ${err.message}</span>`;
+      }
+    };
+    reader.readAsArrayBuffer(file);
+
+  } else if(conv.tipo === 'pdf-ocr'){
     // Mostrar barra de progreso
     document.getElementById('convResult').style.display = 'block';
     document.getElementById('convBtn').style.display = 'none';
