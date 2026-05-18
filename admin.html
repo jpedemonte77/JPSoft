@@ -106,6 +106,7 @@ select:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px r
         <option value="PROGEN">PROGEN (.xlsx)</option>
         <option value="NUEVA ESTRELLA">NUEVA ESTRELLA (.pdf)</option>
         <option value="POLIMIEL">POLIMIEL (.pdf)</option>
+        <option value="TAHONA">TAHONA (.xlsx)</option>
       </select>
     </div>
 
@@ -114,6 +115,17 @@ select:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px r
       <div class="upload-label"><strong>Hacé clic o arrastrá la lista del proveedor</strong></div>
       <div class="upload-label" id="convZoneHint" style="margin-top:4px;font-size:11px">Soporta .xlsx y .pdf</div>
       <input type="file" id="convInput" accept=".xlsx,.xls,.pdf" style="display:none">
+    </div>
+
+    <!-- Zona extra para conversión anterior de TAHONA (códigos de barras) -->
+    <div id="tahonaBarcodesZone" style="display:none;margin-top:10px">
+      <div class="upload-zone" id="convZone2" onclick="document.getElementById('convInput2').click()">
+        <div style="font-size:22px;margin-bottom:6px">🏷️</div>
+        <div class="upload-label"><strong>Cargá tu conversión anterior de TAHONA</strong></div>
+        <div class="upload-label" style="margin-top:4px;font-size:11px">Para conservar los códigos de barras ya registrados (.xlsx)</div>
+        <input type="file" id="convInput2" accept=".xlsx,.xls" style="display:none">
+      </div>
+      <div id="barcodesStatus" style="font-size:12px;color:#999;margin-top:6px;padding:0 4px"></div>
     </div>
 
     <div id="convResult" style="display:none">
@@ -383,6 +395,48 @@ const CONVERSORES = {
     }
   },
 
+  TAHONA: {
+    ganancia: 0.5,
+    tipo: 'xlsx',
+    detectar(rows) {
+      // Estructura original Tahona: Código | Descripción | Peso | Precio
+      let colId=-1, colDesc=-1, colPeso=-1, colLista=-1, headerRow=-1;
+      for(let i=0; i<Math.min(rows.length,10); i++){
+        const r = rows[i].map(c=>String(c||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim());
+        const tieneCod   = r.some(c=>c==='CODIGO'||c==='COD'||c==='CÓDIGO');
+        const tieneDesc  = r.some(c=>c.includes('DESC'));
+        const tienePrecio= r.some(c=>c==='PRECIO'||c.includes('PRECIO'));
+        if(tieneCod && tieneDesc && tienePrecio){
+          headerRow = i;
+          r.forEach((c,idx)=>{
+            if(colId<0   && (c==='CODIGO'||c==='COD'||c==='CÓDIGO')) colId=idx;
+            if(colDesc<0 && c.includes('DESC'))  colDesc=idx;
+            if(colPeso<0 && c==='PESO')          colPeso=idx;
+            if(colLista<0&& c==='PRECIO')        colLista=idx;
+          });
+          break;
+        }
+      }
+      return {colId, colCod:-1, colDesc, colPeso, colLista, headerRow};
+    },
+    transformar(row, rowText, cols, barcodesMap) {
+      const {colId, colDesc, colPeso, colLista} = cols;
+      const desc  = String(row[colDesc]||'').trim();
+      const precio= parseFloat(row[colLista]);
+      if(!desc || desc.length < 2 || isNaN(precio) || precio <= 0) return null;
+
+      // Unir descripción y peso con " - "
+      const peso  = colPeso>=0 ? String(row[colPeso]||'').trim() : '';
+      const nombre= peso ? `${desc} - ${peso}` : desc;
+
+      // Recuperar código de barras guardado si existe
+      const idRaw = colId>=0 ? String(rowText[colId]||row[colId]||'').trim() : '';
+      const cod   = (barcodesMap && barcodesMap[idRaw]) || '';
+
+      return {id: idRaw, cod, nombre, lista: precio};
+    }
+  },
+
   POLIMIEL: {
     ganancia: 0.5,
     tipo: 'pdf-native',
@@ -507,12 +561,50 @@ document.getElementById('convProveedor').addEventListener('change', function(){
   document.getElementById('convZone').style.display = prov ? 'block' : 'none';
   document.getElementById('convResult').style.display = 'none';
   document.getElementById('convInput').value = '';
+  document.getElementById('tahonaBarcodesZone').style.display = prov==='TAHONA' ? 'block' : 'none';
+  document.getElementById('barcodesStatus').textContent = '';
+  tahonaBarcodesMap = null;
   if(conv){
     const esPdf = conv.tipo==='pdf-ocr' || conv.tipo==='pdf-native';
     document.getElementById('convZoneHint').textContent = esPdf ? 'Soporta .pdf' : 'Soporta .xlsx';
     document.getElementById('convInput').accept = esPdf ? '.pdf' : '.xlsx,.xls';
   }
   convData = null;
+});
+
+// Mapa de códigos de barras de TAHONA (ID → EAN)
+let tahonaBarcodesMap = null;
+
+// Leer conversión anterior de TAHONA para extraer códigos de barras
+document.getElementById('convInput2').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const wb = XLSX.read(ev.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:false, blankrows:false});
+      tahonaBarcodesMap = {};
+      let count = 0;
+      rows.forEach(row => {
+        const id  = String(row[0]||'').trim();
+        const cod = String(row[1]||'').trim();
+        // Solo guardar si parece un EAN (8-14 dígitos)
+        if(id && cod && /^\d{8,14}$/.test(cod)){
+          tahonaBarcodesMap[id] = cod;
+          count++;
+        }
+      });
+      document.getElementById('barcodesStatus').innerHTML =
+        `<span style="color:#1a7a50">✓ ${count} códigos de barras cargados</span>`;
+      document.getElementById('convZone2').classList.add('loaded');
+    } catch(err){
+      document.getElementById('barcodesStatus').innerHTML =
+        `<span style="color:#c00">Error leyendo el archivo: ${err.message}</span>`;
+    }
+  };
+  reader.readAsArrayBuffer(file);
 });
 
 // Procesar archivo
@@ -688,7 +780,7 @@ document.getElementById('convInput').addEventListener('change', function(e){
         }
         const productos = [];
         for(let i=cols.headerRow+1; i<rows.length; i++){
-          const p = conv.transformar(rows[i], rowsText[i]||[], cols);
+          const p = conv.transformar(rows[i], rowsText[i]||[], cols, tahonaBarcodesMap);
           if(p) productos.push(p);
         }
         mostrarResultadoConv(prov, productos, conv.ganancia, file.name);
@@ -755,6 +847,11 @@ window.resetConv = function(){
   document.getElementById('convInput').value = '';
   document.getElementById('convProveedor').value = '';
   document.getElementById('convZone').style.display = 'none';
+  document.getElementById('tahonaBarcodesZone').style.display = 'none';
+  document.getElementById('convZone2').classList.remove('loaded');
+  document.getElementById('convInput2').value = '';
+  document.getElementById('barcodesStatus').textContent = '';
+  tahonaBarcodesMap = null;
   convData = null;
 };
 async function cargarUltimaActualizacion(){
