@@ -384,52 +384,32 @@ const CONVERSORES = {
 
   'NUEVA ESTRELLA': {
     ganancia: 0.5,
-    tipo: 'pdf',
-    // Parser de líneas del PDF
-    // Formato: ID(4dig) NOMBRE CODIGO PRECIO
-    // Ejemplo: "2270 ACEITE CANOLA KROL C/OLIVA X250ML 7798127480500 $6950.000"
-    parsearPDF(texto) {
+    tipo: 'pdf-ocr',
+    parsearTextoOCR(texto) {
       const productos = [];
       const lineas = texto.split('\n');
-
-      // Regex: ID(2-4 dígitos) + NOMBRE + opcionalmente CODIGO(7-13 dígitos) + PRECIO
-      // Precio puede ser: $6950.000 o 12580.000 o $6950 (con o sin $, con o sin decimales)
-      const reLinea = /^(\d{2,4})\s+(.+?)\s+((?:\d{7,14}|2\+\d+|\d{3,4}571\w+))\s+\$?([\d.,]+)$/;
-      const reLineaSinCod = /^(\d{2,4})\s+(.+?)\s+\$?([\d.,]+)$/;
-
-      for(let i=0; i<lineas.length; i++){
-        const linea = lineas[i].trim();
-        if(!linea || linea.length < 10) continue;
-        // Saltar encabezados de rubro
-        if(/^Rubro\s+\d+/i.test(linea)) continue;
-        if(/^Lista de Precios/i.test(linea)) continue;
-        if(/^En Vigencia/i.test(linea)) continue;
-        if(/^Precios/i.test(linea)) continue;
-        if(/^\*{3,}/.test(linea)) continue;
-
-        let m = reLinea.exec(linea);
+      // ID(2-4dig) NOMBRE [CODIGO(6-14dig)] PRECIO(con .000 al final)
+      const reConCod = /^(\d{2,4})\s+(.+?)\s+(\d{6,14})\s+\$?([\d.]+)[:.]\d{3}/;
+      const reSinCod = /^(\d{2,4})\s+(.+?)\s+\$?([\d.]+)[:.]\d{3}/;
+      const skipRe = /^(rubro|lista de|en vigencia|precios|la nueva|estrella|naturalmente)/i;
+      lineas.forEach(linea => {
+        linea = linea.trim();
+        if(!linea || linea.length < 8) return;
+        if(skipRe.test(linea)) return;
+        let m = reConCod.exec(linea);
         if(m){
-          const id = m[1].padStart(4,'0');
-          const nombre = m[2].trim();
-          const cod = m[3].trim();
-          const lista = parseFloat(m[4].replace(/\./g,'').replace(',','.'));
-          if(lista > 0 && nombre.length > 2){
-            productos.push({id, cod, nombre, lista});
-          }
-          continue;
+          const lista = parseFloat(m[4].replace(/\./g,''));
+          if(lista > 0 && lista < 100000000)
+            productos.push({id:m[1].padStart(4,'0'), cod:m[3], nombre:m[2].trim(), lista});
+          return;
         }
-        // Sin código de barras
-        m = reLineaSinCod.exec(linea);
+        m = reSinCod.exec(linea);
         if(m){
-          const id = m[1].padStart(4,'0');
-          const nombre = m[2].trim();
-          // Verificar que el "precio" sea razonable (no parte del nombre)
-          const lista = parseFloat(m[3].replace(/\./g,'').replace(',','.'));
-          if(lista > 0 && lista < 10000000 && nombre.length > 2){
-            productos.push({id, cod:'', nombre, lista});
-          }
+          const lista = parseFloat(m[3].replace(/\./g,''));
+          if(lista > 0 && lista < 100000000 && m[2].trim().length > 2)
+            productos.push({id:m[1].padStart(4,'0'), cod:'', nombre:m[2].trim(), lista});
         }
-      }
+      });
       return productos;
     }
   }
@@ -462,11 +442,20 @@ document.getElementById('convInput').addEventListener('change', function(e){
 
   const reader = new FileReader();
 
-  if(conv.tipo === 'pdf'){
-    // Procesar PDF con pdf.js
+  if(conv.tipo === 'pdf-ocr'){
+    // Mostrar barra de progreso
+    document.getElementById('convResult').style.display = 'block';
+    document.getElementById('convBtn').style.display = 'none';
+    document.getElementById('convStatus').innerHTML = `
+      <b>Procesando PDF con OCR...</b><br>
+      <div style="margin-top:8px;background:#f0f0f0;border-radius:6px;overflow:hidden;height:10px">
+        <div id="ocrBar" style="height:10px;background:#111;width:0%;transition:width .3s;border-radius:6px"></div>
+      </div>
+      <div id="ocrMsg" style="font-size:12px;color:#999;margin-top:6px">Cargando motor OCR...</div>`;
+
     reader.onload = async ev => {
       try {
-        // Cargar pdf.js dinámicamente
+        // Cargar pdf.js
         if(!window.pdfjsLib){
           await new Promise((res,rej)=>{
             const s=document.createElement('script');
@@ -474,41 +463,62 @@ document.getElementById('convInput').addEventListener('change', function(e){
             s.onload=res; s.onerror=rej;
             document.head.appendChild(s);
           });
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+          pdfjsLib.GlobalWorkerOptions.workerSrc=
             'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
 
-        const pdf = await pdfjsLib.getDocument({data: ev.target.result}).promise;
-        let textoCompleto = '';
-        for(let p=1; p<=pdf.numPages; p++){
-          const page = await pdf.getPage(p);
-          const content = await page.getTextContent();
-          // Reconstruir líneas agrupando items por posición Y
-          const items = content.items.map(it=>({
-            text: it.str,
-            x: Math.round(it.transform[4]),
-            y: Math.round(it.transform[5])
-          }));
-          // Agrupar por Y (misma línea = mismo Y ± 3px)
-          const lineMap = {};
-          items.forEach(it=>{
-            const yKey = Math.round(it.y/3)*3;
-            if(!lineMap[yKey]) lineMap[yKey]=[];
-            lineMap[yKey].push(it);
-          });
-          // Ordenar líneas de arriba a abajo, items de izq a der
-          const ySorted = Object.keys(lineMap).map(Number).sort((a,b)=>b-a);
-          ySorted.forEach(y=>{
-            const lineItems = lineMap[y].sort((a,b)=>a.x-b.x);
-            const lineText = lineItems.map(it=>it.text).join(' ').trim();
-            if(lineText) textoCompleto += lineText + '\n';
+        // Cargar Tesseract.js
+        if(!window.Tesseract){
+          await new Promise((res,rej)=>{
+            const s=document.createElement('script');
+            s.src='https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js';
+            s.onload=res; s.onerror=rej;
+            document.head.appendChild(s);
           });
         }
 
-        const productos = conv.parsearPDF(textoCompleto);
+        const setMsg = (txt) => document.getElementById('ocrMsg').textContent = txt;
+        const setBar = (pct) => document.getElementById('ocrBar').style.width = pct+'%';
+
+        setMsg('Abriendo PDF...');
+        const pdf = await pdfjsLib.getDocument({data: ev.target.result}).promise;
+        const totalPages = pdf.numPages;
+
+        // Crear worker Tesseract
+        const worker = await Tesseract.createWorker('spa', 1, {
+          logger: () => {}
+        });
+
+        let textoCompleto = '';
+        for(let p=1; p<=totalPages; p++){
+          setMsg(`Procesando página ${p} de ${totalPages}...`);
+          setBar(Math.round((p-1)/totalPages*100));
+
+          // Renderizar página a canvas
+          const page = await pdf.getPage(p);
+          const scale = 2.0; // mayor resolución = mejor OCR
+          const viewport = page.getViewport({scale});
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
+
+          // OCR sobre el canvas
+          const {data:{text}} = await worker.recognize(canvas);
+          textoCompleto += text + '\n';
+        }
+
+        await worker.terminate();
+        setBar(100);
+        setMsg('Analizando resultados...');
+
+        const productos = conv.parsearTextoOCR(textoCompleto);
+        document.getElementById('convBtn').style.display = 'block';
         mostrarResultadoConv(prov, productos, conv.ganancia, file.name);
+
       } catch(err){
-        alert('Error leyendo el PDF: ' + err.message);
+        document.getElementById('convStatus').innerHTML =
+          `<span style="color:#c00">Error: ${err.message}</span>`;
       }
     };
     reader.readAsArrayBuffer(file);
