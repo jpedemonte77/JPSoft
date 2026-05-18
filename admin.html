@@ -430,8 +430,10 @@ const CONVERSORES = {
       const nombre= peso ? `${desc} - ${peso}` : desc;
 
       // Recuperar código de barras guardado si existe
+      // Buscar por ID tal cual y también sin ceros iniciales
       const idRaw = colId>=0 ? String(rowText[colId]||row[colId]||'').trim() : '';
-      const cod   = (barcodesMap && barcodesMap[idRaw]) || '';
+      const idNum = String(parseInt(idRaw, 10));
+      const cod   = (barcodesMap && (barcodesMap[idRaw] || barcodesMap[idNum])) || '';
 
       return {id: idRaw, cod, nombre, lista: precio};
     }
@@ -588,13 +590,17 @@ document.getElementById('convInput2').addEventListener('change', function(e){
       tahonaBarcodesMap = {};
       let count = 0;
       rows.forEach(row => {
-        const id  = String(row[0]||'').trim();
-        const cod = String(row[1]||'').trim();
+        const idRaw = row[0];
+        const cod   = String(row[1]||'').trim();
         // Solo guardar si parece un EAN (8-14 dígitos)
-        if(id && cod && /^\d{8,14}$/.test(cod)){
-          tahonaBarcodesMap[id] = cod;
-          count++;
-        }
+        if(idRaw == null || !cod || !/^\d{8,14}$/.test(cod)) return;
+        // Guardar con el ID tal cual (string) y también sin ceros a la izquierda
+        const idStr = String(idRaw).trim();
+        tahonaBarcodesMap[idStr] = cod;
+        // También guardar versión numérica sin ceros iniciales (ej: "0043" → "43")
+        const idNum = String(parseInt(idStr, 10));
+        if(idNum !== idStr) tahonaBarcodesMap[idNum] = cod;
+        count++;
       });
       document.getElementById('barcodesStatus').innerHTML =
         `<span style="color:#1a7a50">✓ ${count} códigos de barras cargados</span>`;
