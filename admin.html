@@ -231,9 +231,12 @@ function safeCode(val){
   return String(val).trim();
 }
 function detectUnit(desc){
-  const d=desc.toLowerCase();
-  if(/(x\s*\d+\s*kg|\d+\s*kg|\d+\s*kilo)/.test(d)) return 'unit';
-  if(/(-\s*kg\b|x\s*kg\b|\bpor\s*kg\b|\/kg\b|\(x\s*kg|\bprecio\s*kg)/.test(d)) return 'kg';
+  const d=desc.toLowerCase().trim();
+  // Presentaciones bulk cerradas (más de 1 kg) → unidad
+  if(/([-x]\s*([2-9]\d*|1\d+)\s*kg\b)/.test(d)) return 'unit';
+  // Granel: cualquier mención de kg (incluyendo "- 1 kg", "x kg", "(x Kg.)", "a granel")
+  if(/(-\s*1?\s*kg\b|x\s*1?\s*kg\b|\bkg\b|a\s*granel|\bpor\s*kg)/.test(d)) return 'kg';
+  // Precio por 100g
   if(/(\bx\s*100\s*g\b|\bpor\s*100\s*g|\/100\s*g|\bcada\s*100\s*g)/.test(d)) return '100g';
   return 'unit';
 }
