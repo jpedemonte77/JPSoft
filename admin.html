@@ -434,7 +434,9 @@ const CONVERSORES = {
         if(!mp) continue;
         const lista = parseFloat(mp[1]);
         if(lista <= 0) continue;
-        const nombre = resto.slice(0, mp.index).replace(/\s+/g,' ').trim();
+        let nombre = resto.slice(0, mp.index).replace(/\s+/g,' ').trim();
+        // Cortar descripción: conservar solo hasta el final de la presentación
+        nombre = nombre.replace(/(\b\d+\s*(caps?\.?|grs?\.?|cc|ml|kg|lt|g)\b).*$/i, '$1').trim();
         if(!nombre) continue;
         const id  = cod.length >= 10 ? '' : cod;
         const ean = cod.length >= 10 ? cod : '';
