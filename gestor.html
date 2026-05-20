@@ -604,7 +604,7 @@ function renderTable(){
       <td style="white-space:nowrap"><span class="badge ${badgeClass(p.proveedor)}">${p.proveedor}</span></td>
       <td style="font-size:11px;color:#bbb;font-family:'DM Mono',monospace">${p.id||'—'}</td>
       <td style="font-size:11px;color:#bbb;font-family:'DM Mono',monospace">${p.cod||'—'}</td>
-      <td style="font-size:${prodSize};font-weight:500;color:#111;white-space:nowrap">${descHL}${unitBadge}</td>
+      <td style="font-size:${prodSize};font-weight:500;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:0" title="${p.desc}">${descHL}${unitBadge}</td>
       <td class="num p-venta">${precioLabel}</td>
       <td class="num" style="line-height:1.3"><span class="p-lista" style="font-size:12px">${fmt(p.lista)}</span><br><span class="p-diff" style="font-size:11px">+${fmt(diff)}</span></td>
     </tr>`;}).join('');
@@ -613,7 +613,7 @@ function renderTable(){
       const isFav=favSet.has(favId(p));
       return `<div class="prod-card">
         <div class="prod-card-top">
-          <div class="prod-card-desc">${descHL}</div>
+          <div class="prod-card-desc" id="cd-${i}" style="cursor:pointer;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical" onclick="toggleCardDesc(this,'${p.desc.replace(/'/g,'\\'')}')">${descHL}</div>
           <span class="badge ${badgeClass(p.proveedor)}">${p.proveedor}</span>
         </div>
         <div class="prod-card-bottom">
@@ -892,6 +892,19 @@ function toggleFavFilter(){
   page = 1;
   applyFilters();
 }
+
+window.toggleCardDesc = function(el, fullName){
+  const expanded = el.dataset.expanded === '1';
+  if(expanded){
+    el.style.webkitLineClamp = '2';
+    el.style.overflow = 'hidden';
+    el.dataset.expanded = '0';
+  } else {
+    el.style.webkitLineClamp = 'unset';
+    el.style.overflow = 'visible';
+    el.dataset.expanded = '1';
+  }
+};
 
 window.toggleFav = function(idx){
   const key = idxMap[idx]; if(!key) return;
