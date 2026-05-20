@@ -613,7 +613,7 @@ function renderTable(){
       const isFav=favSet.has(favId(p));
       return `<div class="prod-card">
         <div class="prod-card-top">
-          <div class="prod-card-desc" id="cd-${i}" style="cursor:pointer;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical" onclick="toggleCardDesc(this,'${p.desc.replace(/'/g,'\\'')}')">${descHL}</div>
+          <div class="prod-card-desc" data-full="${p.desc.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" style="cursor:pointer;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical" onclick="toggleCardDesc(this)">${descHL}</div>
           <span class="badge ${badgeClass(p.proveedor)}">${p.proveedor}</span>
         </div>
         <div class="prod-card-bottom">
@@ -893,7 +893,7 @@ function toggleFavFilter(){
   applyFilters();
 }
 
-window.toggleCardDesc = function(el, fullName){
+window.toggleCardDesc = function(el){
   const expanded = el.dataset.expanded === '1';
   if(expanded){
     el.style.webkitLineClamp = '2';
@@ -924,18 +924,6 @@ function updateFavStat(){
 
 cargarDesdeFirebase();
 </script>
-
-<script>
-if('serviceWorker' in navigator){
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/JPSoft/sw.js')
-      .then(reg => console.log('SW registrado:', reg.scope))
-      .catch(err => console.warn('SW error:', err));
-  });
-}
-</script>
-</body>
-</html>
 
 <script>
 if('serviceWorker' in navigator){
