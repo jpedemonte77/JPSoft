@@ -60,7 +60,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:#f7f7f8;color:#111;mi
 .stat-l{font-size:12px;color:#999;margin-top:1px}
 
 /* ── Body ── */
-.body-area{flex:1;display:flex;overflow-x:hidden}
+.body-area{flex:1;display:flex;overflow:visible}
 
 /* ── Tabla ── */
 .table-area{flex:1;min-width:0;overflow-x:hidden}
@@ -323,9 +323,8 @@ tr.is-fav td{background:rgba(217,119,6,0.03)}
             <th>ID</th>
             <th>Código</th>
             <th class="desc">Producto</th>
-            <th class="num">P. Lista</th>
             <th class="num">P. Venta</th>
-            <th class="num">Ganancia</th>
+            <th class="num">P. Lista</th>
           </tr>
         </thead>
         <tbody id="tableBody"></tbody>
@@ -606,9 +605,8 @@ function renderTable(){
       <td style="font-size:11px;color:#bbb;font-family:'DM Mono',monospace">${p.id||'—'}</td>
       <td style="font-size:11px;color:#bbb;font-family:'DM Mono',monospace">${p.cod||'—'}</td>
       <td style="font-size:${prodSize};font-weight:500;color:#111;white-space:nowrap">${descHL}${unitBadge}</td>
-      <td class="num p-lista" style="font-size:12px">${fmt(p.lista)}</td>
       <td class="num p-venta">${precioLabel}</td>
-      <td class="num p-diff" style="font-size:12px">+${fmt(diff)}</td>
+      <td class="num" style="line-height:1.3"><span class="p-lista" style="font-size:12px">${fmt(p.lista)}</span><br><span class="p-diff" style="font-size:11px">+${fmt(diff)}</span></td>
     </tr>`;}).join('');
     // Tarjetas móvil
     cardList.innerHTML=rows.map(({p,venta,diff,descHL,unitSuffix,i})=>{
