@@ -156,7 +156,7 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
 .prod-card-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .prod-card-venta{font-size:20px;font-weight:500;color:#111}
 .prod-card-unit{font-size:10px;color:#999;margin-left:2px}
-.prod-card-meta{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.prod-card-meta{display:flex;flex-direction:column;align-items:flex-end;gap:2px;text-align:right}
 .prod-card-lista{font-size:11px;color:#bbb}
 .prod-card-diff{font-size:11px;color:#1a7a50;font-weight:500}
 
@@ -197,7 +197,7 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
   .prod-card-bottom{display:flex;justify-content:space-between;align-items:center}
   .prod-card-venta{font-size:22px;font-weight:600;color:#111}
   .prod-card-unit{font-size:11px;color:#999;font-weight:400;margin-left:2px}
-  .prod-card-meta{font-size:11px;color:#bbb;margin-top:2px}
+  .prod-card-meta{font-size:11px;color:var(--color-text-secondary);margin-top:2px;text-align:right}
   .prod-card-diff{color:#1a7a50;font-weight:500}
 
   .page-btn{padding:8px 18px;font-size:13px}
@@ -597,7 +597,10 @@ function renderTable(){
         <div class="prod-card-bottom">
           <div>
             <div><span class="prod-card-venta">${fmt(venta)}</span><span class="prod-card-unit">${unitSuffix}</span></div>
-            <div class="prod-card-meta">Lista: ${fmt(p.lista)} · <span class="prod-card-diff">+${fmt(diff)}</span></div>
+          </div>
+          <div class="prod-card-meta">
+            <span style="font-size:12px;color:var(--color-text-secondary)">Lista: ${fmt(p.lista)}</span>
+            <span class="prod-card-diff">+${fmt(diff)}</span>
           </div>
 
         </div>
