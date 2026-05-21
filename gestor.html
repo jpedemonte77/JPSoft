@@ -48,8 +48,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:#f7f7f8;color:#111;mi
 .search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:#999;pointer-events:none}
 .search-wrap input{width:100%;padding:10px 14px 10px 34px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;font-size:15px;background:#f7f7f8;color:#111;outline:none;font-family:inherit;transition:all .15s}
 .search-wrap input:focus{background:#fff;border-color:rgba(0,0,0,0.3);box-shadow:0 0 0 3px rgba(0,0,0,0.05)}
-.search-hint{font-size:12px;color:#bbb;display:flex;gap:5px;flex-wrap:wrap}
-.search-hint span{background:#f0f0f2;border-radius:3px;padding:1px 6px;font-family:'DM Mono',monospace;font-size:12px}
+
 
 /* ── Stats ── */
 .stats-row{display:flex;gap:0;padding:12px 20px 10px;flex-shrink:0;align-items:stretch}
@@ -169,9 +168,7 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
   /* Ocultar Ganancia/Carrito y paneles */
   .toggle-group{display:none!important}
   .side-panels{display:none!important}
-  /* Ocultar scanner y hints */
   .scan-badge{display:none!important}
-  .search-hint{display:none!important}
   /* Topbar */
   .topbar{padding:10px 16px}
   .tb-brand{font-size:15px}
@@ -273,21 +270,12 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
       <div class="pills" id="filtersRow"></div>
     </div>
     <div>
-      <div class="ctrl-label">Producto</div>
       <div class="search-row">
         <div class="search-wrap" id="searchWrap">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" id="searchInput" placeholder="Buscar: harina avena, arandano, 7798348231769..." oninput="applyFilters()">
+          <input type="text" id="searchInput" placeholder="" oninput="applyFilters()">
         </div>
-        <div class="scan-badge" id="scanBadge">
-          <span class="scan-dot" id="scanDot"></span>
-          <span id="scanText">Listo para escanear</span>
-        </div>
-        <div class="search-hint">
-          <span>palabras en cualquier orden</span>
-          <span>sin tildes</span>
-          <span>código parcial</span>
-        </div>
+
       </div>
     </div>
   </div>
