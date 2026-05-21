@@ -494,8 +494,11 @@ const CONVERSORES = {
     tipo: 'xls',
     detectar(rows) {
       // Estructura: CÓDIGO | DESCRIPCIÓN | $ VENTA
-      // Fila de encabezado tiene exactamente esas palabras
+      // Fila 2 (índice 2) col 4 contiene la fecha de la lista como número serial
       let headerRow = -1;
+      let fechaSerial = null;
+      // Intentar extraer fecha de fila 2 col 4
+      if(rows[2] && rows[2][4]) fechaSerial = rows[2][4];
       for(let i=0; i<Math.min(rows.length, 15); i++){
         const r = rows[i].map(c=>String(c||'').toUpperCase().trim());
         if(r.some(c=>c.includes('DESCRIPCI')) && r.some(c=>c.includes('VENTA'))){
@@ -503,20 +506,19 @@ const CONVERSORES = {
           break;
         }
       }
-      // Columnas fijas: 0=código, 1=descripción, 2=precio
-      return {headerRow, colCod:0, colDesc:1, colLista:2};
+      return {headerRow, colCod:0, colDesc:1, colLista:2, fechaSerial};
     },
     transformar(row) {
       const cod  = String(row[0]||'').trim();
       const desc = String(row[1]||'').trim();
       const precioRaw = String(row[2]||'').trim();
-      // Saltar filas sin descripción o sin precio válido
       if(!cod || !desc || !precioRaw) return null;
-      const lista = parseFloat(precioRaw);
+      const lista = Math.round(parseFloat(precioRaw));
       if(isNaN(lista) || lista <= 0) return null;
-      // Saltar fila de encabezado por si queda
       if(cod.toUpperCase() === 'CÓDIGO' || cod.toUpperCase() === 'CODIGO') return null;
-      return {id: '', cod, nombre: desc, lista};
+      const ean = cod.length >= 10 ? cod : '';
+      const shortId = cod.length < 10 ? cod : '';
+      return {id: shortId, cod: ean || cod, nombre: desc, lista};
     }
   },
 
@@ -944,7 +946,8 @@ document.getElementById('convInput').addEventListener('change', function(e){
           if(p) productos.push(p);
         }
         // Informar si TAHONA procesó sin mapa de barras todavía
-        mostrarResultadoConv(prov, productos, conv.ganancia, file.name);
+        const extraConv = prov === 'G NATURALE' ? {fechaSerial: cols.fechaSerial||null} : {};
+        mostrarResultadoConv(prov, productos, conv.ganancia, file.name, extraConv);
         if(prov === 'TAHONA' && !tahonaBarcodesMap){
           document.getElementById('barcodesStatus').innerHTML =
             '<span style="color:#f59e0b">⚠ Cargá la conversión anterior para aplicar los códigos de barras</span>';
@@ -957,9 +960,9 @@ document.getElementById('convInput').addEventListener('change', function(e){
   }
 });
 
-function mostrarResultadoConv(prov, productos, ganancia, fileName){
+function mostrarResultadoConv(prov, productos, ganancia, fileName, extra={}){
   const mes = new Date().toLocaleString('es-AR',{month:'long',year:'numeric'}).toUpperCase();
-  convData = {prov, productos, ganancia, mes};
+  convData = {prov, productos, ganancia, mes, ...extra};
   document.getElementById('convStatus').innerHTML =
     `<b>✓ ${productos.length} productos detectados</b> — ${prov} · ${mes}<br>
     <div class="table-wrap-scroll" style="margin-top:8px">
@@ -973,37 +976,62 @@ function mostrarResultadoConv(prov, productos, ganancia, fileName){
 // Descargar Excel convertido
 window.descargarConvertido = function(){
   if(!convData) return;
-  const {prov, productos, ganancia, mes} = convData;
+  const {prov, productos, ganancia, mes, fechaSerial} = convData;
   const wb = XLSX.utils.book_new();
+  let aoa, ws;
 
-  // Construir filas en el formato del libro maestro
-  const aoa = [
-    [prov, mes, null, null, null],
-    [null, null, null, null, null],
-    [null, null, null, '% GANANCIA:', null],
-    [null, null, null, ganancia, null],
-    ['ID', 'CODIGO', 'PRODUCTO', 'P. LISTA', 'P. VENTA'],
-    ...productos.map(p=>[p.id||null, p.cod, p.nombre, p.lista, null])
-  ];
-
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-
-  // Formato de código como texto para preservar EAN-13
-  // Formato de moneda $ sin decimales para P. LISTA
-  productos.forEach((p, i)=>{
-    const rowIdx = i + 5;
-    const codRef = XLSX.utils.encode_cell({r: rowIdx, c: 1});
-    if(ws[codRef]) ws[codRef].t = 's';
-    const listaRef = XLSX.utils.encode_cell({r: rowIdx, c: 3});
-    if(ws[listaRef]) ws[listaRef].z = '"$"#,##0';
-  });
-
-  // Ancho de columnas
-  ws['!cols'] = [{wch:8},{wch:16},{wch:45},{wch:12},{wch:12}];
+  if(prov === 'G NATURALE'){
+    // Formato exacto del modelo G NATURALE
+    // Fecha: convertir serial xls a fecha JS
+    let fechaStr = '';
+    if(fechaSerial){
+      // Serial xls: días desde 1/1/1900 (con bug del año bisiesto 1900)
+      const d = new Date(Math.round((fechaSerial - 25569) * 86400 * 1000));
+      fechaStr = d.toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit', year:'numeric'});
+    } else {
+      fechaStr = new Date().toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit', year:'numeric'});
+    }
+    aoa = [
+      ['G NATURALE', fechaStr, null, null, null],
+      [null, null, null, null, '% Ganancia:'],
+      [null, null, null, null, ganancia],
+      ['ID', 'CODIGO', 'PRODUCTO', 'P. LISTA', 'P. VENTA'],
+      ...productos.map(p=>[p.id||null, p.cod, p.nombre, p.lista, null])
+    ];
+    ws = XLSX.utils.aoa_to_sheet(aoa);
+    // Códigos como texto, precios sin decimales alineados izquierda
+    productos.forEach((p, i)=>{
+      const r = i + 4;
+      const codRef = XLSX.utils.encode_cell({r, c: 1});
+      if(ws[codRef]) ws[codRef].t = 's';
+      const listaRef = XLSX.utils.encode_cell({r, c: 3});
+      if(ws[listaRef]){ ws[listaRef].z = '#,##0'; ws[listaRef].t = 'n'; }
+    });
+    ws['!cols'] = [{wch:12},{wch:18},{wch:52},{wch:14},{wch:14}];
+  } else {
+    // Resto de proveedores — formato original
+    aoa = [
+      [prov, mes, null, null, null],
+      [null, null, null, null, null],
+      [null, null, null, '% GANANCIA:', null],
+      [null, null, null, ganancia, null],
+      ['ID', 'CODIGO', 'PRODUCTO', 'P. LISTA', 'P. VENTA'],
+      ...productos.map(p=>[p.id||null, p.cod, p.nombre, p.lista, null])
+    ];
+    ws = XLSX.utils.aoa_to_sheet(aoa);
+    productos.forEach((p, i)=>{
+      const rowIdx = i + 5;
+      const codRef = XLSX.utils.encode_cell({r: rowIdx, c: 1});
+      if(ws[codRef]) ws[codRef].t = 's';
+      const listaRef = XLSX.utils.encode_cell({r: rowIdx, c: 3});
+      if(ws[listaRef]) ws[listaRef].z = '"$"#,##0';
+    });
+    ws['!cols'] = [{wch:8},{wch:16},{wch:45},{wch:12},{wch:12}];
+  }
 
   XLSX.utils.book_append_sheet(wb, ws, prov);
-  const fechaStr = new Date().toLocaleDateString('es-AR').replace(/\//g,'-');
-  XLSX.writeFile(wb, `${prov}_convertido_${fechaStr}.xlsx`);
+  const fechaArchivo = new Date().toLocaleDateString('es-AR').replace(/\//g,'-');
+  XLSX.writeFile(wb, `${prov}_convertido_${fechaArchivo}.xlsx`);
 };
 
 // ── FITOFARM: leer PDF guardado desde el browser ──
