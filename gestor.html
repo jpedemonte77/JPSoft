@@ -87,7 +87,7 @@ tr.in-cart td{background:#f0faf5}
 .p-venta{font-size:16px;font-weight:600;color:#111}
 .p-diff{font-size:12px;color:#1a7a50;font-weight:500}
 mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
-.add-btn{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,0.12);background:#fff;cursor:pointer;font-size:14px;display:inline-flex;align-items:center;justify-content:center;color:#555;transition:all .15s}
+.add-btn{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,0.12);background:#fff;cursor:pointer;font-size:14px;display:none;align-items:center;justify-content:center;color:#555;transition:all .15s}.cart-active .add-btn{display:inline-flex}
 .add-btn:hover{background:#111;color:#fff;border-color:#111}
 .add-btn.added{background:#1a7a50;color:#fff;border-color:#1a7a50}
 .unit-badge{display:inline-block;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:500;margin-left:4px;vertical-align:middle;background:rgba(12,68,124,0.08);color:#0C447C}
@@ -202,8 +202,7 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
   .prod-card-unit{font-size:11px;color:#999;font-weight:400;margin-left:2px}
   .prod-card-meta{font-size:11px;color:#bbb;margin-top:2px}
   .prod-card-diff{color:#1a7a50;font-weight:500}
-  .prod-card-fav{width:32px;height:32px;border-radius:50%;border:none;background:#f7f7f8;display:flex;align-items:center;justify-content:center;font-size:18px;color:#ddd;cursor:pointer;flex-shrink:0}
-  .prod-card-fav.on{color:#d97706}
+
   .page-btn{padding:8px 18px;font-size:13px}
   .pagination{gap:12px;padding:1rem 0}
 }
@@ -219,13 +218,7 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
 .scan-badge.read .scan-dot{background:#1a7a50}
 @keyframes scandot{0%,100%{opacity:1}50%{opacity:.2}}
 
-/* ── Favoritos ── */
-.pill.fav-pill{background:rgba(217,119,6,0.06);color:#92400e;border-color:rgba(217,119,6,0.25);display:inline-flex;align-items:center;gap:5px}
-.pill.fav-pill.active{background:#92400e;color:#fff;border-color:#92400e}
-tr.is-fav td{background:rgba(217,119,6,0.03)}
-.fav-btn{width:22px;height:22px;border-radius:50%;border:none;background:none;display:inline-flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;color:#ddd;transition:color .15s;padding:0;line-height:1}
-.fav-btn:hover{color:#d97706}
-.fav-btn.on{color:#d97706}
+/* Favoritos eliminado */
 
 /* ── Ticket de venta ── */
 .ticket-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px}
@@ -303,7 +296,7 @@ tr.is-fav td{background:rgba(217,119,6,0.03)}
   <div class="stats-row">
     <div class="stats-main">
       <div class="stat"><div class="stat-n" id="statTotal">0</div><div class="stat-l">productos encontrados</div></div>
-      <div class="stat"><div class="stat-n" id="statFavs">0</div><div class="stat-l">favoritos</div></div>
+      
       <div class="stat"><div class="stat-n" id="statProv">0</div><div class="stat-l">proveedores</div></div>
     </div>
     <div class="stats-update" id="statUpdateWrap" style="display:none">
@@ -317,7 +310,6 @@ tr.is-fav td{background:rgba(217,119,6,0.03)}
       <table>
         <colgroup>
           <col style="width:32px">
-          <col style="width:32px">
           <col style="width:130px">
           <col style="width:56px">
           <col style="width:110px">
@@ -327,7 +319,6 @@ tr.is-fav td{background:rgba(217,119,6,0.03)}
         </colgroup>
         <thead>
           <tr>
-            <th></th>
             <th></th>
             <th>Proveedor</th>
             <th>ID</th>
@@ -490,7 +481,6 @@ function cargarDesdeFirebase(){
     buildGananciasPanel();
     buildFilters();
     applyFilters();
-    cargarFavs();
 
   }, (err) => {
     mostrarError('Error al conectar con el servidor. Verificá tu conexión a internet.<br><small>'+err.message+'</small>');
@@ -527,18 +517,12 @@ function buildFilters(){
   document.getElementById('statProv').textContent=provs.length;
   const row=document.getElementById('filtersRow');
   row.innerHTML='';
-  // Pill de favoritos siempre primero
-  const favPill=document.createElement('button');
-  favPill.id='favPill';
-  favPill.className='pill fav-pill'+(showingFavs?' active':'');
-  favPill.innerHTML='★ Favoritos';
-  favPill.onclick=toggleFavFilter;
-  row.appendChild(favPill);
+
   ['Todos',...provs].forEach(name=>{
     const btn=document.createElement('button');
     btn.className='pill'+(name===activeFilter?' active':'');
     btn.textContent=name;
-    btn.onclick=()=>{activeFilter=name;showingFavs=false;document.querySelectorAll('.pill').forEach(b=>b.classList.remove('active'));btn.classList.add('active');page=1;applyFilters();document.getElementById('searchInput').focus();};
+    btn.onclick=()=>{activeFilter=name;document.querySelectorAll('.pill').forEach(b=>b.classList.remove('active'));btn.classList.add('active');page=1;applyFilters();document.getElementById('searchInput').focus();};
     row.appendChild(btn);
   });
 }
@@ -547,8 +531,7 @@ window.applyFilters = function(){
   const raw=document.getElementById('searchInput').value;
   const words=norm(raw).split(' ').filter(Boolean);
   filtered=allProducts.filter(p=>{
-    if(showingFavs && !favSet.has(favId(p))) return false;
-    if(!showingFavs && activeFilter!=='Todos' && p.proveedor!==activeFilter) return false;
+    if(activeFilter!=='Todos' && p.proveedor!==activeFilter) return false;
     if(!words.length) return true;
     return matchQuery(p.normDesc,words)||matchQuery(p.normCod,words)||matchQuery(p.normId||'',words);
   });
@@ -607,10 +590,8 @@ function renderTable(){
 
     tbody.innerHTML=rows.map(({p,diff,descHL,unitBadge,precioLabel,inCart,i})=>{
       const prodSize=calcFontSize(p.desc);
-      const isFav=favSet.has(favId(p));
-      return `<tr class="${inCart?'in-cart':''} ${isFav?'is-fav':''}">
+      return `<tr class="${inCart?'in-cart':''}">
       <td><button class="add-btn ${inCart?'added':''}" onclick="toggleCartItem(${i})" title="${inCart?'Quitar':'Agregar'}">${inCart?'✓':'+'}</button></td>
-      <td><button class="fav-btn ${isFav?'on':''}" onclick="toggleFav(${i})" title="${isFav?'Quitar de favoritos':'Agregar a favoritos'}">${isFav?'★':'☆'}</button></td>
       <td style="white-space:nowrap"><span class="badge ${badgeClass(p.proveedor)}">${p.proveedor}</span></td>
       <td style="font-size:11px;color:#bbb;font-family:'DM Mono',monospace">${p.id||'—'}</td>
       <td style="font-size:11px;color:#bbb;font-family:'DM Mono',monospace">${p.cod||'—'}</td>
@@ -620,7 +601,6 @@ function renderTable(){
     </tr>`;}).join('');
     // Tarjetas móvil
     cardList.innerHTML=rows.map(({p,venta,diff,descHL,unitSuffix,i})=>{
-      const isFav=favSet.has(favId(p));
       return `<div class="prod-card">
         <div class="prod-card-top">
           <div class="prod-card-desc" data-full="${p.desc.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" style="cursor:pointer;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical" onclick="toggleCardDesc(this)">${descHL}</div>
@@ -631,7 +611,7 @@ function renderTable(){
             <div><span class="prod-card-venta">${fmt(venta)}</span><span class="prod-card-unit">${unitSuffix}</span></div>
             <div class="prod-card-meta">Lista: ${fmt(p.lista)} · <span class="prod-card-diff">+${fmt(diff)}</span></div>
           </div>
-          <button class="prod-card-fav ${isFav?'on':''}" onclick="toggleFav(${i})">${isFav?'★':'☆'}</button>
+
         </div>
       </div>`;}).join('');
   }
@@ -712,6 +692,7 @@ function updateSidePanels(){
   document.getElementById('ganBlock').style.display=panelStates.gan?'block':'none';
   document.getElementById('cartBlock').style.display=panelStates.cart?'block':'none';
   document.getElementById('cartFooter').style.display=panelStates.cart?'block':'none';
+  document.getElementById('app').classList.toggle('cart-active', panelStates.cart);
 }
 window.togglePanel=function(panel){
   panelStates[panel]=!panelStates[panel];
@@ -865,43 +846,11 @@ window.cerrarModal=function(){document.getElementById('modalOverlay').style.disp
 window.nuevaVenta=function(){Object.keys(cart).forEach(k=>delete cart[k]);cerrarModal();document.getElementById('ticketOverlay').style.display='none';renderTable();renderCart();};
 
 // ── Favoritos ──
-let favSet = new Set();
-let showingFavs = false;
 
-function favId(p){ return p.proveedor + '||' + p.desc; }
 
-// Clave Firebase segura (sin caracteres inválidos)
-function favKey(fid){ return fid.replace(/[.#$\[\]/]/g,'_'); }
 
-async function cargarFavs(){
-  try {
-    const snap = await get(ref(db, 'gestor_favs'));
-    if(snap.exists()){
-      favSet = new Set(Object.keys(snap.val()).map(k=>k.replace(/_DOT_/g,'.').replace(/_HASH_/g,'#')));
-    }
-  } catch(e){ console.warn('Error cargando favoritos:', e); }
-  updateFavStat();
-  renderTable();
-}
 
-async function saveFavs(){
-  try {
-    const obj = {};
-    favSet.forEach(fid => { obj[favKey(fid)] = true; });
-    await set(ref(db, 'gestor_favs'), Object.keys(obj).length ? obj : null);
-  } catch(e){ console.warn('Error guardando favoritos:', e); }
-}
 
-function toggleFavFilter(){
-  showingFavs = !showingFavs;
-  document.getElementById('favPill').classList.toggle('active', showingFavs);
-  if(showingFavs){
-    activeFilter = 'Todos';
-    document.querySelectorAll('.pill:not(.fav-pill)').forEach(b=>b.classList.remove('active'));
-  }
-  page = 1;
-  applyFilters();
-}
 
 window.toggleCardDesc = function(el){
   const expanded = el.dataset.expanded === '1';
@@ -916,21 +865,9 @@ window.toggleCardDesc = function(el){
   }
 };
 
-window.toggleFav = function(idx){
-  const key = idxMap[idx]; if(!key) return;
-  const p = allProducts.find(x=>x.key===key); if(!p) return;
-  const fid = favId(p);
-  if(favSet.has(fid)){ favSet.delete(fid); }
-  else { favSet.add(fid); }
-  saveFavs();
-  renderTable();
-  updateFavStat();
-};
 
-function updateFavStat(){
-  const el = document.getElementById('statFavs');
-  if(el) el.textContent = favSet.size;
-}
+
+
 
 cargarDesdeFirebase();
 </script>
