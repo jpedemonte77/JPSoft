@@ -655,7 +655,23 @@ document.addEventListener('keydown',e=>{
   if(!input) return;
   if(document.activeElement===input){
     if(e.key==='Enter'){const val=input.value.trim();if(/^\d+$/.test(val)){e.preventDefault();applyFilters();}}
+    if(e.key==='Escape'){input.value='';applyFilters();input.blur();}
     return;
+  }
+  // Búsqueda rápida: si no hay ningún input activo y se presiona una tecla imprimible
+  const tag=document.activeElement?document.activeElement.tagName:'';
+  if(tag!=='INPUT'&&tag!=='TEXTAREA'&&tag!=='SELECT'){
+    if(e.key.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey){
+      input.focus();
+      // No hacemos nada más — el keydown ya depositó el caracter en el input nativamente
+      return;
+    }
+    if(e.key==='Backspace'){
+      input.focus();
+      input.value=input.value.slice(0,-1);
+      applyFilters();
+      return;
+    }
   }
   const gap=now-lastKeyTime; lastKeyTime=now;
   if(e.key==='Enter'){
