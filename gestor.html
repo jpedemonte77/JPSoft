@@ -424,55 +424,79 @@ function getPrecioVenta(p){
 }
 
 // ── Cargar desde Firebase ──
-function cargarDesdeFirebase(){
+const LS_KEY = 'jpsoft_gestor_cache';
 
-  // ════════════════════════════════════════════════════════
-  // CAMBIO 2 DE 2 — Reemplazar get() por onValue()
-  //
-  // ANTES (una sola lectura):
-  //   const snap = await get(ref(db, 'gestor'));
-  //   ... procesar snap ...
-  //
-  // AHORA (escucha continua):
-  //   onValue() se ejecuta inmediatamente al abrir la página
-  //   Y TAMBIÉN cada vez que los datos cambian en Firebase.
-  //   Es decir: cuando vos publicás precios nuevos desde el
-  //   admin, todos los clientes conectados los ven al instante
-  //   sin tener que refrescar la página.
-  // ════════════════════════════════════════════════════════
+function guardarEnCache(data){
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({data, ts: Date.now()}));
+  } catch(e) {}
+}
+
+function cargarDesdeCache(){
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return null;
+    return JSON.parse(raw);
+  } catch(e) { return null; }
+}
+
+function aplicarDatos(data){
+  Object.keys(gananciaMap).forEach(k => delete gananciaMap[k]);
+  Object.keys(useSugeridoMap).forEach(k => delete useSugeridoMap[k]);
+  Object.keys(provColorMap).forEach(k => delete provColorMap[k]);
+
+  allProducts = data.products || [];
+  Object.assign(gananciaMap, data.gananciaMap||{});
+  Object.assign(useSugeridoMap, data.useSugeridoMap||{});
+
+  if(data.updatedAt){
+    const upFull=data.updatedAt;
+    const upParts=upFull.match(/(\d+)\/(\d+)\/\d+,?\s*(\d+:\d+)/);
+    const upCompact=upParts?`${upParts[1]}/${upParts[2]} ${upParts[3]}`:upFull;
+    document.getElementById('statUpdate').textContent=window.innerWidth<640?upCompact:upFull;
+    document.getElementById('statUpdateWrap').style.display = 'flex';
+  }
+
+  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  buildGananciasPanel();
+  buildFilters();
+  applyFilters();
+}
+
+function mostrarAvisoOffline(visible){
+  let aviso = document.getElementById('offlineAviso');
+  if(!aviso){
+    aviso = document.createElement('div');
+    aviso.id = 'offlineAviso';
+    aviso.style.cssText = 'position:fixed;bottom:12px;left:50%;transform:translateX(-50%);background:#333;color:#fff;font-size:12px;padding:7px 16px;border-radius:20px;z-index:999;transition:opacity .3s';
+    aviso.textContent = 'Sin conexión — mostrando últimos precios guardados';
+    document.body.appendChild(aviso);
+  }
+  aviso.style.opacity = visible ? '1' : '0';
+  aviso.style.pointerEvents = 'none';
+}
+
+function cargarDesdeFirebase(){
   onValue(ref(db, 'gestor'), (snap) => {
     if(!snap.exists()){
       mostrarError('No hay datos disponibles. El administrador debe publicar las listas primero.');
       return;
     }
     const data = snap.val();
-
-    // Resetear maps antes de reasignar (por si hubo actualización)
-    Object.keys(gananciaMap).forEach(k => delete gananciaMap[k]);
-    Object.keys(useSugeridoMap).forEach(k => delete useSugeridoMap[k]);
-    Object.keys(provColorMap).forEach(k => delete provColorMap[k]);
-
-    allProducts = data.products || [];
-    Object.assign(gananciaMap, data.gananciaMap||{});
-    Object.assign(useSugeridoMap, data.useSugeridoMap||{});
-
-    // Mostrar fecha de actualización
-    if(data.updatedAt){
-      const upFull=data.updatedAt;
-      const upParts=upFull.match(/(\d+)\/(\d+)\/\d+,?\s*(\d+:\d+)/);
-      const upCompact=upParts?`${upParts[1]}/${upParts[2]} ${upParts[3]}`:upFull;
-      document.getElementById('statUpdate').textContent=window.innerWidth<640?upCompact:upFull;
-      document.getElementById('statUpdateWrap').style.display = 'flex';
-    }
-
-    document.getElementById('loadingScreen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    buildGananciasPanel();
-    buildFilters();
-    applyFilters();
+    guardarEnCache(data);
+    mostrarAvisoOffline(false);
+    aplicarDatos(data);
 
   }, (err) => {
-    mostrarError('Error al conectar con el servidor. Verificá tu conexión a internet.<br><small>'+err.message+'</small>');
+    // Sin conexión — intentar desde caché
+    const cache = cargarDesdeCache();
+    if(cache){
+      mostrarAvisoOffline(true);
+      aplicarDatos(cache.data);
+    } else {
+      mostrarError('Sin conexión y sin datos guardados.<br><small>Abrí el gestor con internet al menos una vez para habilitar el modo offline.</small>');
+    }
   });
 }
 
