@@ -478,7 +478,24 @@ function mostrarAvisoOffline(visible){
 }
 
 function cargarDesdeFirebase(){
+  let cargado = false;
+
+  // Timeout: si Firebase no responde en 5 segundos, usar caché
+  const timeout = setTimeout(() => {
+    if(cargado) return;
+    const cache = cargarDesdeCache();
+    if(cache){
+      mostrarAvisoOffline(true);
+      aplicarDatos(cache.data);
+    } else {
+      mostrarError('Sin conexión y sin datos guardados.<br><small>Abrí el gestor con internet al menos una vez para habilitar el modo offline.</small>');
+    }
+  }, 5000);
+
   onValue(ref(db, 'gestor'), (snap) => {
+    if(cargado) return; // ya cargamos desde caché, ignorar
+    clearTimeout(timeout);
+    cargado = true;
     if(!snap.exists()){
       mostrarError('No hay datos disponibles. El administrador debe publicar las listas primero.');
       return;
@@ -489,7 +506,8 @@ function cargarDesdeFirebase(){
     aplicarDatos(data);
 
   }, (err) => {
-    // Sin conexión — intentar desde caché
+    clearTimeout(timeout);
+    if(cargado) return;
     const cache = cargarDesdeCache();
     if(cache){
       mostrarAvisoOffline(true);
