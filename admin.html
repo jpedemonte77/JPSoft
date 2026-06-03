@@ -381,7 +381,7 @@ window.subirAFirebase = async function(){
       products:      parsedData.allProducts,
       gananciaMap:   parsedData.gananciaMap,
       useSugeridoMap:parsedData.useSugeridoMap,
-      updatedAt:     new Date().toLocaleString('es-AR'),
+      updatedAt:     new Date().toLocaleString('es-AR',{hour12:false}),
       totalProducts: parsedData.allProducts.length,
       proveedores:   [...new Set(parsedData.allProducts.map(p=>p.proveedor))]
     };
