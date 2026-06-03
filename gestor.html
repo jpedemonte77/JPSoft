@@ -48,7 +48,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:#f7f7f8;color:#111;mi
 .search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:#999;pointer-events:none}
 .search-wrap input{width:100%;padding:10px 14px 10px 34px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;font-size:15px;background:#f7f7f8;color:#111;outline:none;font-family:inherit;transition:all .15s}
 .search-wrap input:focus{background:#fff;border-color:rgba(0,0,0,0.3);box-shadow:0 0 0 3px rgba(0,0,0,0.05)}
-
+.search-hint{font-size:12px;color:#bbb;display:flex;gap:5px;flex-wrap:wrap}
+.search-hint span{background:#f0f0f2;border-radius:3px;padding:1px 6px;font-family:'DM Mono',monospace;font-size:12px}
 
 /* ── Stats ── */
 .stats-row{display:flex;gap:0;padding:12px 20px 10px;flex-shrink:0;align-items:stretch}
@@ -86,7 +87,7 @@ tr.in-cart td{background:#f0faf5}
 .p-venta{font-size:16px;font-weight:600;color:#111}
 .p-diff{font-size:12px;color:#1a7a50;font-weight:500}
 mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
-.add-btn{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,0.12);background:#fff;cursor:pointer;font-size:14px;display:none;align-items:center;justify-content:center;color:#555;transition:all .15s}.cart-active .add-btn{display:inline-flex}
+.add-btn{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,0.12);background:#fff;cursor:pointer;font-size:14px;display:inline-flex;align-items:center;justify-content:center;color:#555;transition:all .15s}
 .add-btn:hover{background:#111;color:#fff;border-color:#111}
 .add-btn.added{background:#1a7a50;color:#fff;border-color:#1a7a50}
 .unit-badge{display:inline-block;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:500;margin-left:4px;vertical-align:middle;background:rgba(12,68,124,0.08);color:#0C447C}
@@ -156,7 +157,7 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
 .prod-card-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .prod-card-venta{font-size:20px;font-weight:500;color:#111}
 .prod-card-unit{font-size:10px;color:#999;margin-left:2px}
-.prod-card-meta{display:flex;flex-direction:column;align-items:flex-end;gap:2px;text-align:right}
+.prod-card-meta{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
 .prod-card-lista{font-size:11px;color:#bbb}
 .prod-card-diff{font-size:11px;color:#1a7a50;font-weight:500}
 
@@ -168,7 +169,9 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
   /* Ocultar Ganancia/Carrito y paneles */
   .toggle-group{display:none!important}
   .side-panels{display:none!important}
+  /* Ocultar scanner y hints */
   .scan-badge{display:none!important}
+  .search-hint{display:none!important}
   /* Topbar */
   .topbar{padding:10px 16px}
   .tb-brand{font-size:15px}
@@ -186,7 +189,7 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
   .stat-n{font-size:13px}
   .stat-l{font-size:8px}
   .stats-update{width:auto!important;padding-left:5px;flex:0 0 auto}
-
+  #statUpdate{font-size:11px!important}
   /* Tabla/cards */
   .table-area{display:none}
   .card-list{display:flex;padding:8px 16px;gap:8px;flex-direction:column}
@@ -197,9 +200,10 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
   .prod-card-bottom{display:flex;justify-content:space-between;align-items:center}
   .prod-card-venta{font-size:22px;font-weight:600;color:#111}
   .prod-card-unit{font-size:11px;color:#999;font-weight:400;margin-left:2px}
-  .prod-card-meta{font-size:11px;color:var(--color-text-secondary);margin-top:2px;text-align:right}
+  .prod-card-meta{font-size:11px;color:#bbb;margin-top:2px}
   .prod-card-diff{color:#1a7a50;font-weight:500}
-
+  .prod-card-fav{width:32px;height:32px;border-radius:50%;border:none;background:#f7f7f8;display:flex;align-items:center;justify-content:center;font-size:18px;color:#ddd;cursor:pointer;flex-shrink:0}
+  .prod-card-fav.on{color:#d97706}
   .page-btn{padding:8px 18px;font-size:13px}
   .pagination{gap:12px;padding:1rem 0}
 }
@@ -215,7 +219,13 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
 .scan-badge.read .scan-dot{background:#1a7a50}
 @keyframes scandot{0%,100%{opacity:1}50%{opacity:.2}}
 
-/* Favoritos eliminado */
+/* ── Favoritos ── */
+.pill.fav-pill{background:rgba(217,119,6,0.06);color:#92400e;border-color:rgba(217,119,6,0.25);display:inline-flex;align-items:center;gap:5px}
+.pill.fav-pill.active{background:#92400e;color:#fff;border-color:#92400e}
+tr.is-fav td{background:rgba(217,119,6,0.03)}
+.fav-btn{width:22px;height:22px;border-radius:50%;border:none;background:none;display:inline-flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;color:#ddd;transition:color .15s;padding:0;line-height:1}
+.fav-btn:hover{color:#d97706}
+.fav-btn.on{color:#d97706}
 
 /* ── Ticket de venta ── */
 .ticket-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px}
@@ -274,9 +284,17 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
       <div class="search-row">
         <div class="search-wrap" id="searchWrap">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" id="searchInput" placeholder="" oninput="applyFilters()">
+          <input type="text" id="searchInput" placeholder="Buscar: harina avena, arandano, 7798348231769..." oninput="applyFilters()">
         </div>
-
+        <div class="scan-badge" id="scanBadge">
+          <span class="scan-dot" id="scanDot"></span>
+          <span id="scanText">Listo para escanear</span>
+        </div>
+        <div class="search-hint">
+          <span>palabras en cualquier orden</span>
+          <span>sin tildes</span>
+          <span>código parcial</span>
+        </div>
       </div>
     </div>
   </div>
@@ -285,11 +303,11 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
   <div class="stats-row">
     <div class="stats-main">
       <div class="stat"><div class="stat-n" id="statTotal">0</div><div class="stat-l">productos encontrados</div></div>
-      
+      <div class="stat"><div class="stat-n" id="statFavs">0</div><div class="stat-l">favoritos</div></div>
       <div class="stat"><div class="stat-n" id="statProv">0</div><div class="stat-l">proveedores</div></div>
     </div>
     <div class="stats-update" id="statUpdateWrap" style="display:none">
-      <div class="stat"><div class="stat-n" id="statUpdate"></div><div class="stat-l">última actualización</div></div>
+      <div class="stat"><div class="stat-n" id="statUpdate" style="font-size:14px"></div><div class="stat-l">última actualización</div></div>
     </div>
   </div>
 
@@ -298,6 +316,7 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
     <div class="table-area">
       <table>
         <colgroup>
+          <col style="width:32px">
           <col style="width:32px">
           <col style="width:130px">
           <col style="width:56px">
@@ -308,6 +327,7 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
         </colgroup>
         <thead>
           <tr>
+            <th></th>
             <th></th>
             <th>Proveedor</th>
             <th>ID</th>
@@ -424,97 +444,56 @@ function getPrecioVenta(p){
 }
 
 // ── Cargar desde Firebase ──
-const LS_KEY = 'jpsoft_gestor_cache';
-
-function guardarEnCache(data){
-  try {
-    localStorage.setItem(LS_KEY, JSON.stringify({data, ts: Date.now()}));
-  } catch(e) {}
-}
-
-function cargarDesdeCache(){
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if(!raw) return null;
-    return JSON.parse(raw);
-  } catch(e) { return null; }
-}
-
-function aplicarDatos(data){
-  Object.keys(gananciaMap).forEach(k => delete gananciaMap[k]);
-  Object.keys(useSugeridoMap).forEach(k => delete useSugeridoMap[k]);
-  Object.keys(provColorMap).forEach(k => delete provColorMap[k]);
-
-  allProducts = data.products || [];
-  Object.assign(gananciaMap, data.gananciaMap||{});
-  Object.assign(useSugeridoMap, data.useSugeridoMap||{});
-
-  if(data.updatedAt){
-    const upFull=data.updatedAt;
-    const upParts=upFull.match(/(\d+)\/(\d+)\/\d+,?\s*(\d+:\d+)/);
-    const upCompact=upParts?`${upParts[1]}/${upParts[2]} ${upParts[3]}`:upFull;
-    document.getElementById('statUpdate').textContent=window.innerWidth<640?upCompact:upFull;
-    document.getElementById('statUpdateWrap').style.display = 'flex';
-  }
-
-  document.getElementById('loadingScreen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  buildGananciasPanel();
-  buildFilters();
-  applyFilters();
-}
-
-function mostrarAvisoOffline(visible){
-  let aviso = document.getElementById('offlineAviso');
-  if(!aviso){
-    aviso = document.createElement('div');
-    aviso.id = 'offlineAviso';
-    aviso.style.cssText = 'position:fixed;bottom:12px;left:50%;transform:translateX(-50%);background:#333;color:#fff;font-size:12px;padding:7px 16px;border-radius:20px;z-index:999;transition:opacity .3s';
-    aviso.textContent = 'Sin conexión — mostrando últimos precios guardados';
-    document.body.appendChild(aviso);
-  }
-  aviso.style.opacity = visible ? '1' : '0';
-  aviso.style.pointerEvents = 'none';
-}
-
 function cargarDesdeFirebase(){
-  let cargado = false;
 
-  // Timeout: si Firebase no responde en 5 segundos, usar caché
-  const timeout = setTimeout(() => {
-    if(cargado) return;
-    const cache = cargarDesdeCache();
-    if(cache){
-      mostrarAvisoOffline(true);
-      aplicarDatos(cache.data);
-    } else {
-      mostrarError('Sin conexión y sin datos guardados.<br><small>Abrí el gestor con internet al menos una vez para habilitar el modo offline.</small>');
-    }
-  }, 5000);
-
+  // ════════════════════════════════════════════════════════
+  // CAMBIO 2 DE 2 — Reemplazar get() por onValue()
+  //
+  // ANTES (una sola lectura):
+  //   const snap = await get(ref(db, 'gestor'));
+  //   ... procesar snap ...
+  //
+  // AHORA (escucha continua):
+  //   onValue() se ejecuta inmediatamente al abrir la página
+  //   Y TAMBIÉN cada vez que los datos cambian en Firebase.
+  //   Es decir: cuando vos publicás precios nuevos desde el
+  //   admin, todos los clientes conectados los ven al instante
+  //   sin tener que refrescar la página.
+  // ════════════════════════════════════════════════════════
   onValue(ref(db, 'gestor'), (snap) => {
-    if(cargado) return; // ya cargamos desde caché, ignorar
-    clearTimeout(timeout);
-    cargado = true;
     if(!snap.exists()){
       mostrarError('No hay datos disponibles. El administrador debe publicar las listas primero.');
       return;
     }
     const data = snap.val();
-    guardarEnCache(data);
-    mostrarAvisoOffline(false);
-    aplicarDatos(data);
+
+    // Resetear maps antes de reasignar (por si hubo actualización)
+    Object.keys(gananciaMap).forEach(k => delete gananciaMap[k]);
+    Object.keys(useSugeridoMap).forEach(k => delete useSugeridoMap[k]);
+    Object.keys(provColorMap).forEach(k => delete provColorMap[k]);
+
+    allProducts = data.products || [];
+    Object.assign(gananciaMap, data.gananciaMap||{});
+    Object.assign(useSugeridoMap, data.useSugeridoMap||{});
+
+    // Mostrar fecha de actualización
+    if(data.updatedAt){
+      const upFull=data.updatedAt;
+      const upParts=upFull.match(/(\d+)\/(\d+)\/\d+,?\s*(\d+:\d+)/);
+      const upCompact=upParts?`${upParts[1]}/${upParts[2]} ${upParts[3]}`:upFull;
+      document.getElementById('statUpdate').textContent=window.innerWidth<640?upCompact:upFull;
+      document.getElementById('statUpdateWrap').style.display = 'flex';
+    }
+
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    buildGananciasPanel();
+    buildFilters();
+    applyFilters();
+    cargarFavs();
 
   }, (err) => {
-    clearTimeout(timeout);
-    if(cargado) return;
-    const cache = cargarDesdeCache();
-    if(cache){
-      mostrarAvisoOffline(true);
-      aplicarDatos(cache.data);
-    } else {
-      mostrarError('Sin conexión y sin datos guardados.<br><small>Abrí el gestor con internet al menos una vez para habilitar el modo offline.</small>');
-    }
+    mostrarError('Error al conectar con el servidor. Verificá tu conexión a internet.<br><small>'+err.message+'</small>');
   });
 }
 
@@ -548,12 +527,18 @@ function buildFilters(){
   document.getElementById('statProv').textContent=provs.length;
   const row=document.getElementById('filtersRow');
   row.innerHTML='';
-
+  // Pill de favoritos siempre primero
+  const favPill=document.createElement('button');
+  favPill.id='favPill';
+  favPill.className='pill fav-pill'+(showingFavs?' active':'');
+  favPill.innerHTML='★ Favoritos';
+  favPill.onclick=toggleFavFilter;
+  row.appendChild(favPill);
   ['Todos',...provs].forEach(name=>{
     const btn=document.createElement('button');
     btn.className='pill'+(name===activeFilter?' active':'');
     btn.textContent=name;
-    btn.onclick=()=>{activeFilter=name;document.querySelectorAll('.pill').forEach(b=>b.classList.remove('active'));btn.classList.add('active');page=1;applyFilters();document.getElementById('searchInput').focus();};
+    btn.onclick=()=>{activeFilter=name;showingFavs=false;document.querySelectorAll('.pill').forEach(b=>b.classList.remove('active'));btn.classList.add('active');page=1;applyFilters();document.getElementById('searchInput').focus();};
     row.appendChild(btn);
   });
 }
@@ -562,7 +547,8 @@ window.applyFilters = function(){
   const raw=document.getElementById('searchInput').value;
   const words=norm(raw).split(' ').filter(Boolean);
   filtered=allProducts.filter(p=>{
-    if(activeFilter!=='Todos' && p.proveedor!==activeFilter) return false;
+    if(showingFavs && !favSet.has(favId(p))) return false;
+    if(!showingFavs && activeFilter!=='Todos' && p.proveedor!==activeFilter) return false;
     if(!words.length) return true;
     return matchQuery(p.normDesc,words)||matchQuery(p.normCod,words)||matchQuery(p.normId||'',words);
   });
@@ -621,8 +607,10 @@ function renderTable(){
 
     tbody.innerHTML=rows.map(({p,diff,descHL,unitBadge,precioLabel,inCart,i})=>{
       const prodSize=calcFontSize(p.desc);
-      return `<tr class="${inCart?'in-cart':''}">
+      const isFav=favSet.has(favId(p));
+      return `<tr class="${inCart?'in-cart':''} ${isFav?'is-fav':''}">
       <td><button class="add-btn ${inCart?'added':''}" onclick="toggleCartItem(${i})" title="${inCart?'Quitar':'Agregar'}">${inCart?'✓':'+'}</button></td>
+      <td><button class="fav-btn ${isFav?'on':''}" onclick="toggleFav(${i})" title="${isFav?'Quitar de favoritos':'Agregar a favoritos'}">${isFav?'★':'☆'}</button></td>
       <td style="white-space:nowrap"><span class="badge ${badgeClass(p.proveedor)}">${p.proveedor}</span></td>
       <td style="font-size:11px;color:#bbb;font-family:'DM Mono',monospace">${p.id||'—'}</td>
       <td style="font-size:11px;color:#bbb;font-family:'DM Mono',monospace">${p.cod||'—'}</td>
@@ -632,6 +620,7 @@ function renderTable(){
     </tr>`;}).join('');
     // Tarjetas móvil
     cardList.innerHTML=rows.map(({p,venta,diff,descHL,unitSuffix,i})=>{
+      const isFav=favSet.has(favId(p));
       return `<div class="prod-card">
         <div class="prod-card-top">
           <div class="prod-card-desc" data-full="${p.desc.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" style="cursor:pointer;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical" onclick="toggleCardDesc(this)">${descHL}</div>
@@ -640,12 +629,9 @@ function renderTable(){
         <div class="prod-card-bottom">
           <div>
             <div><span class="prod-card-venta">${fmt(venta)}</span><span class="prod-card-unit">${unitSuffix}</span></div>
+            <div class="prod-card-meta">Lista: ${fmt(p.lista)} · <span class="prod-card-diff">+${fmt(diff)}</span></div>
           </div>
-          <div class="prod-card-meta">
-            <span style="font-size:12px;color:var(--color-text-secondary)">Lista: ${fmt(p.lista)}</span>
-            <span class="prod-card-diff">+${fmt(diff)}</span>
-          </div>
-
+          <button class="prod-card-fav ${isFav?'on':''}" onclick="toggleFav(${i})">${isFav?'★':'☆'}</button>
         </div>
       </div>`;}).join('');
   }
@@ -697,23 +683,7 @@ document.addEventListener('keydown',e=>{
   if(!input) return;
   if(document.activeElement===input){
     if(e.key==='Enter'){const val=input.value.trim();if(/^\d+$/.test(val)){e.preventDefault();applyFilters();}}
-    if(e.key==='Escape'){input.value='';applyFilters();input.blur();}
     return;
-  }
-  // Búsqueda rápida: si no hay ningún input activo y se presiona una tecla imprimible
-  const tag=document.activeElement?document.activeElement.tagName:'';
-  if(tag!=='INPUT'&&tag!=='TEXTAREA'&&tag!=='SELECT'){
-    if(e.key.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey){
-      input.focus();
-      // No hacemos nada más — el keydown ya depositó el caracter en el input nativamente
-      return;
-    }
-    if(e.key==='Backspace'){
-      input.focus();
-      input.value=input.value.slice(0,-1);
-      applyFilters();
-      return;
-    }
   }
   const gap=now-lastKeyTime; lastKeyTime=now;
   if(e.key==='Enter'){
@@ -742,7 +712,6 @@ function updateSidePanels(){
   document.getElementById('ganBlock').style.display=panelStates.gan?'block':'none';
   document.getElementById('cartBlock').style.display=panelStates.cart?'block':'none';
   document.getElementById('cartFooter').style.display=panelStates.cart?'block':'none';
-  document.getElementById('app').classList.toggle('cart-active', panelStates.cart);
 }
 window.togglePanel=function(panel){
   panelStates[panel]=!panelStates[panel];
@@ -812,7 +781,7 @@ window.confirmarNuevaVenta=function(){
   if(!Object.keys(cart).length) return;
   const now=new Date();
   const fecha=now.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
-  const hora=now.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+  const hora=now.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false});
   const keys=Object.keys(cart);
   const total=keys.reduce((s,k)=>s+calcPrecio(cart[k].product,cart[k].qty,cart[k].gramos),0);
   document.getElementById('ticketSub').textContent=`${fecha} — ${hora} hs · Total: ${fmtDec(total)}`;
@@ -896,11 +865,43 @@ window.cerrarModal=function(){document.getElementById('modalOverlay').style.disp
 window.nuevaVenta=function(){Object.keys(cart).forEach(k=>delete cart[k]);cerrarModal();document.getElementById('ticketOverlay').style.display='none';renderTable();renderCart();};
 
 // ── Favoritos ──
+let favSet = new Set();
+let showingFavs = false;
 
+function favId(p){ return p.proveedor + '||' + p.desc; }
 
+// Clave Firebase segura (sin caracteres inválidos)
+function favKey(fid){ return fid.replace(/[.#$\[\]/]/g,'_'); }
 
+async function cargarFavs(){
+  try {
+    const snap = await get(ref(db, 'gestor_favs'));
+    if(snap.exists()){
+      favSet = new Set(Object.keys(snap.val()).map(k=>k.replace(/_DOT_/g,'.').replace(/_HASH_/g,'#')));
+    }
+  } catch(e){ console.warn('Error cargando favoritos:', e); }
+  updateFavStat();
+  renderTable();
+}
 
+async function saveFavs(){
+  try {
+    const obj = {};
+    favSet.forEach(fid => { obj[favKey(fid)] = true; });
+    await set(ref(db, 'gestor_favs'), Object.keys(obj).length ? obj : null);
+  } catch(e){ console.warn('Error guardando favoritos:', e); }
+}
 
+function toggleFavFilter(){
+  showingFavs = !showingFavs;
+  document.getElementById('favPill').classList.toggle('active', showingFavs);
+  if(showingFavs){
+    activeFilter = 'Todos';
+    document.querySelectorAll('.pill:not(.fav-pill)').forEach(b=>b.classList.remove('active'));
+  }
+  page = 1;
+  applyFilters();
+}
 
 window.toggleCardDesc = function(el){
   const expanded = el.dataset.expanded === '1';
@@ -915,9 +916,21 @@ window.toggleCardDesc = function(el){
   }
 };
 
+window.toggleFav = function(idx){
+  const key = idxMap[idx]; if(!key) return;
+  const p = allProducts.find(x=>x.key===key); if(!p) return;
+  const fid = favId(p);
+  if(favSet.has(fid)){ favSet.delete(fid); }
+  else { favSet.add(fid); }
+  saveFavs();
+  renderTable();
+  updateFavStat();
+};
 
-
-
+function updateFavStat(){
+  const el = document.getElementById('statFavs');
+  if(el) el.textContent = favSet.size;
+}
 
 cargarDesdeFirebase();
 </script>
