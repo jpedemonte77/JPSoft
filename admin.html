@@ -493,50 +493,53 @@ const CONVERSORES = {
     ganancia: 0.6,
     tipo: 'xls',
     detectar(rows) {
-      // Soporta dos formatos:
-      // Formato viejo: CÓDIGO | DESCRIPCIÓN | $ VENTA  (encabezado con DESCRIPCI + VENTA)
-      // Formato nuevo: ID | CODIGO | PRODUCTO | PRECIO  (encabezado con PRODUCTO o CODIGO)
+      // Soporta tres formatos:
+      // Formato A (xls): CÓDIGO | (vacío) | DESCRIPCIÓN | $ VENTA  → cols 0,2,3
+      // Formato B (xls): CÓDIGO | DESCRIPCIÓN | $ VENTA             → cols 0,1,2
+      // Formato C (xlsx): ID | CODIGO | PRODUCTO | precio           → cols 1,2,3
       let headerRow = -1;
       let fechaSerial = null;
-      let formatoNuevo = false;
+      let formato = 'B';
 
-      // Buscar fecha en las primeras 3 filas (col 0 o col 4)
-      for(let i=0; i<Math.min(rows.length, 3); i++){
-        const v0 = rows[i] && rows[i][0];
-        const v4 = rows[i] && rows[i][4];
-        if(v0 && (typeof v0 === 'number' || v0 instanceof Date)) fechaSerial = v0;
-        if(v4 && (typeof v4 === 'number' || v4 instanceof Date)) fechaSerial = v4;
+      // Buscar fecha serial de Excel (número entre 40000 y 60000) en las primeras 5 filas
+      for(let i=0; i<Math.min(rows.length, 5); i++){
+        if(!rows[i]) continue;
+        for(let j=0; j<rows[i].length; j++){
+          const v = rows[i][j];
+          if(typeof v === 'number' && v > 40000 && v < 60000){ fechaSerial = v; break; }
+          if(v instanceof Date){ fechaSerial = v; break; }
+        }
+        if(fechaSerial) break;
       }
 
       for(let i=0; i<Math.min(rows.length, 15); i++){
         const r = rows[i].map(c=>String(c||'').toUpperCase().trim());
-        // Formato viejo
+        // Formato C: tiene PRODUCTO y CODIGO/ID
+        if(r.some(c=>c==='PRODUCTO') && r.some(c=>c==='CODIGO'||c==='ID')){
+          headerRow = i; formato = 'C'; break;
+        }
+        // Formato A o B: tiene DESCRIPCI y VENTA
         if(r.some(c=>c.includes('DESCRIPCI')) && r.some(c=>c.includes('VENTA'))){
           headerRow = i;
-          formatoNuevo = false;
-          break;
-        }
-        // Formato nuevo: ID | CODIGO | PRODUCTO
-        if(r.some(c=>c==='PRODUCTO') && r.some(c=>c==='CODIGO' || c==='ID')){
-          headerRow = i;
-          formatoNuevo = true;
+          // Formato A: col 1 vacía → descripción en col 2
+          formato = (String(rows[i][1]||'').trim() === '') ? 'A' : 'B';
           break;
         }
       }
-      // colCod/colDesc/colLista según formato detectado
-      if(formatoNuevo){
-        return {headerRow, colCod:1, colDesc:2, colLista:3, fechaSerial, formatoNuevo};
-      }
-      return {headerRow, colCod:0, colDesc:1, colLista:2, fechaSerial, formatoNuevo};
+      const colMap = {
+        'A': {colCod:0, colDesc:2, colLista:3},
+        'B': {colCod:0, colDesc:1, colLista:2},
+        'C': {colCod:1, colDesc:2, colLista:3},
+      };
+      return {headerRow, ...colMap[formato], fechaSerial, formato};
     },
     transformar(row, rowText, cols) {
-      const formatoNuevo = cols && cols.formatoNuevo;
-      const iCod   = formatoNuevo ? 1 : 0;
-      const iDesc  = formatoNuevo ? 2 : 1;
-      const iLista = formatoNuevo ? 3 : 2;
-      const cod  = String(row[iCod]||'').trim();
-      const desc = String(row[iDesc]||'').trim();
-      const precioRaw = String(row[iLista]||'').trim();
+      const colCod  = (cols && cols.colCod  != null) ? cols.colCod  : 0;
+      const colDesc = (cols && cols.colDesc != null) ? cols.colDesc : 1;
+      const colLista= (cols && cols.colLista!= null) ? cols.colLista: 2;
+      const cod  = String(row[colCod]||'').trim();
+      const desc = String(row[colDesc]||'').trim();
+      const precioRaw = String(row[colLista]||'').trim();
       if(!desc || !precioRaw) return null;
       const lista = Math.round(parseFloat(precioRaw));
       if(isNaN(lista) || lista <= 0) return null;
