@@ -493,29 +493,54 @@ const CONVERSORES = {
     ganancia: 0.6,
     tipo: 'xls',
     detectar(rows) {
-      // Estructura: CÓDIGO | DESCRIPCIÓN | $ VENTA
-      // Fila 2 (índice 2) col 4 contiene la fecha de la lista como número serial
+      // Soporta dos formatos:
+      // Formato viejo: CÓDIGO | DESCRIPCIÓN | $ VENTA  (encabezado con DESCRIPCI + VENTA)
+      // Formato nuevo: ID | CODIGO | PRODUCTO | PRECIO  (encabezado con PRODUCTO o CODIGO)
       let headerRow = -1;
       let fechaSerial = null;
-      // Intentar extraer fecha de fila 2 col 4
-      if(rows[2] && rows[2][4]) fechaSerial = rows[2][4];
+      let formatoNuevo = false;
+
+      // Buscar fecha en las primeras 3 filas (col 0 o col 4)
+      for(let i=0; i<Math.min(rows.length, 3); i++){
+        const v0 = rows[i] && rows[i][0];
+        const v4 = rows[i] && rows[i][4];
+        if(v0 && (typeof v0 === 'number' || v0 instanceof Date)) fechaSerial = v0;
+        if(v4 && (typeof v4 === 'number' || v4 instanceof Date)) fechaSerial = v4;
+      }
+
       for(let i=0; i<Math.min(rows.length, 15); i++){
         const r = rows[i].map(c=>String(c||'').toUpperCase().trim());
+        // Formato viejo
         if(r.some(c=>c.includes('DESCRIPCI')) && r.some(c=>c.includes('VENTA'))){
           headerRow = i;
+          formatoNuevo = false;
+          break;
+        }
+        // Formato nuevo: ID | CODIGO | PRODUCTO
+        if(r.some(c=>c==='PRODUCTO') && r.some(c=>c==='CODIGO' || c==='ID')){
+          headerRow = i;
+          formatoNuevo = true;
           break;
         }
       }
-      return {headerRow, colCod:0, colDesc:1, colLista:2, fechaSerial};
+      // colCod/colDesc/colLista según formato detectado
+      if(formatoNuevo){
+        return {headerRow, colCod:1, colDesc:2, colLista:3, fechaSerial, formatoNuevo};
+      }
+      return {headerRow, colCod:0, colDesc:1, colLista:2, fechaSerial, formatoNuevo};
     },
-    transformar(row) {
-      const cod  = String(row[0]||'').trim();
-      const desc = String(row[1]||'').trim();
-      const precioRaw = String(row[2]||'').trim();
-      if(!cod || !desc || !precioRaw) return null;
+    transformar(row, rowText, cols) {
+      const formatoNuevo = cols && cols.formatoNuevo;
+      const iCod   = formatoNuevo ? 1 : 0;
+      const iDesc  = formatoNuevo ? 2 : 1;
+      const iLista = formatoNuevo ? 3 : 2;
+      const cod  = String(row[iCod]||'').trim();
+      const desc = String(row[iDesc]||'').trim();
+      const precioRaw = String(row[iLista]||'').trim();
+      if(!desc || !precioRaw) return null;
       const lista = Math.round(parseFloat(precioRaw));
       if(isNaN(lista) || lista <= 0) return null;
-      if(cod.toUpperCase() === 'CÓDIGO' || cod.toUpperCase() === 'CODIGO') return null;
+      if(desc.toUpperCase() === 'PRODUCTO' || desc.toUpperCase() === 'DESCRIPCION' || desc.toUpperCase() === 'DESCRIPCIÓN') return null;
       const ean = cod.length >= 10 ? cod : '';
       const shortId = cod.length < 10 ? cod : '';
       return {id: shortId, cod: ean || cod, nombre: desc, lista};
@@ -939,9 +964,9 @@ document.getElementById('convInput').addEventListener('change', function(e){
         }
         const productos = [];
         for(let i=cols.headerRow+1; i<rows.length; i++){
-          // G NATURALE usa firma simplificada (solo row); otros usan (row, rowText, cols, barcodesMap)
+          // G NATURALE usa (row, rowText, cols); otros usan (row, rowText, cols, barcodesMap)
           const p = conv.tipo === 'xls'
-            ? conv.transformar(rows[i])
+            ? conv.transformar(rows[i], rowsText[i]||[], cols)
             : conv.transformar(rows[i], rowsText[i]||[], cols, tahonaBarcodesMap);
           if(p) productos.push(p);
         }
