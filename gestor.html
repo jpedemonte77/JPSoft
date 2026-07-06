@@ -366,7 +366,7 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
           <span class="total-label">Total</span>
           <span class="total-amount" id="totalAmount">$0</span>
         </div>
-        <button class="btn-nueva" id="btnNueva" onclick="confirmarNuevaVenta()" disabled>Nueva venta</button>
+        <button class="btn-nueva" id="btnNueva" onclick="confirmarNuevaVenta()" disabled>Cobrar</button>
       </div>
     </div>
   </div>
@@ -390,15 +390,11 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
 <!-- Ticket de venta -->
 <div class="ticket-overlay" id="ticketOverlay" style="display:none">
   <div class="ticket-modal">
-    <div class="ticket-header">
-      <div class="ticket-title">¿Imprimís o guardás el ticket?</div>
-      <div class="ticket-sub" id="ticketSub"></div>
-    </div>
     <div class="ticket-preview" id="ticketPreview"></div>
     <div class="ticket-btns">
-      <button class="tbtn tbtn-print" onclick="imprimirTicket()">🖨️ Imprimir</button>
+      <button class="tbtn tbtn-no" onclick="nuevaVenta()">Nueva venta</button>
       <button class="tbtn tbtn-save" onclick="guardarTicket()">💾 Guardar</button>
-      <button class="tbtn tbtn-no" onclick="nuevaVenta()">No · Ir a nueva venta</button>
+      <button class="tbtn tbtn-print" onclick="imprimirTicket()">🖨️ Imprimir</button>
     </div>
   </div>
 </div>
@@ -911,7 +907,6 @@ window.confirmarNuevaVenta=function(){
   const hora=now.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
   const keys=Object.keys(cart);
   const total=keys.reduce((s,k)=>s+calcPrecio(cart[k].product,cart[k].qty,cart[k].gramos),0);
-  document.getElementById('ticketSub').textContent=`${fecha} — ${hora} hs · Total: ${fmtDec(total)}`;
   let rowsHtml='';
   keys.forEach(k=>{
     const{product:p,qty,gramos}=cart[k];
