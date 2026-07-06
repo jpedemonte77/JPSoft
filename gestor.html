@@ -248,8 +248,13 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
 /* Favoritos eliminado */
 
 /* ── Ticket de venta ── */
-.ticket-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px}
-.ticket-modal{background:#fff;border-radius:14px;width:100%;max-width:380px;overflow:hidden;border:1px solid rgba(0,0,0,0.08)}
+.ticket-overlay{position:fixed;inset:0;pointer-events:none;z-index:200}
+.ticket-modal{position:fixed;background:#fff;border-radius:14px;width:380px;max-width:calc(100vw - 24px);overflow:hidden;border:1px solid rgba(0,0,0,0.08);box-shadow:0 8px 32px rgba(0,0,0,0.18);pointer-events:auto;user-select:none}
+.ticket-modal-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid rgba(0,0,0,0.06);cursor:grab;gap:8px}
+.ticket-modal-header:active{cursor:grabbing}
+.ticket-modal-htitle{font-size:11px;font-weight:500;color:#999;text-transform:uppercase;letter-spacing:.06em;flex:1}
+.ticket-modal-close{width:20px;height:20px;border-radius:50%;border:none;background:rgba(0,0,0,0.08);color:#555;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;flex-shrink:0;transition:background .15s}
+.ticket-modal-close:hover{background:#111;color:#fff}
 .ticket-header{padding:20px 24px 16px;border-bottom:1px solid rgba(0,0,0,0.06)}
 .ticket-title{font-size:16px;font-weight:600;color:#111;margin-bottom:4px}
 .ticket-sub{font-size:13px;color:#999}
@@ -389,12 +394,16 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
 
 <!-- Ticket de venta -->
 <div class="ticket-overlay" id="ticketOverlay" style="display:none">
-  <div class="ticket-modal">
+  <div class="ticket-modal" id="ticketModal">
+    <div class="ticket-modal-header" id="ticketModalHeader">
+      <span class="ticket-modal-htitle">Ticket de venta</span>
+      <button class="ticket-modal-close" onclick="cerrarTicket()" title="Cerrar">✕</button>
+    </div>
     <div class="ticket-preview" id="ticketPreview"></div>
     <div class="ticket-btns">
-      <button class="tbtn tbtn-no" onclick="nuevaVenta()">Nueva venta</button>
       <button class="tbtn tbtn-save" onclick="guardarTicket()">💾 Guardar</button>
       <button class="tbtn tbtn-print" onclick="imprimirTicket()">🖨️ Imprimir</button>
+      <button class="tbtn tbtn-no" onclick="nuevaVenta()">Nueva venta</button>
     </div>
   </div>
 </div>
@@ -923,7 +932,15 @@ window.confirmarNuevaVenta=function(){
     <hr class="ticket-divider">
     <div class="ticket-total"><span>TOTAL</span><span>${fmtDec(total)}</span></div>`;
   window._ticketData={fecha,hora,total,keys};
-  document.getElementById('ticketOverlay').style.display='flex';
+  const ov=document.getElementById('ticketOverlay');
+  const md=document.getElementById('ticketModal');
+  ov.style.display='block';
+  if(!md._moved){
+    requestAnimationFrame(()=>{
+      md.style.left = Math.round((window.innerWidth - md.offsetWidth)/2)+'px';
+      md.style.top  = Math.round((window.innerHeight - md.offsetHeight)/2)+'px';
+    });
+  }
 };
 
 window.imprimirTicket = function(){
@@ -960,7 +977,6 @@ window.imprimirTicket = function(){
   win.document.close();
   win.focus();
   setTimeout(()=>{win.print();win.close();},300);
-  nuevaVenta();
 };
 
 window.guardarTicket = function(){
@@ -981,10 +997,47 @@ window.guardarTicket = function(){
   a.download=`Ticket_${fechaFile}_${hora.replace(':','-')}.txt`;
   a.click();
   URL.revokeObjectURL(a.href);
-  nuevaVenta();
 };
 window.cerrarModal=function(){document.getElementById('modalOverlay').style.display='none';};
-window.nuevaVenta=function(){Object.keys(cart).forEach(k=>delete cart[k]);cerrarModal();document.getElementById('ticketOverlay').style.display='none';renderTable();renderCart();};
+window.nuevaVenta=function(){Object.keys(cart).forEach(k=>delete cart[k]);cerrarModal();const md=document.getElementById('ticketModal');if(md)md._moved=false;document.getElementById('ticketOverlay').style.display='none';renderTable();renderCart();};
+// Cierra el modal del ticket SIN limpiar el carrito
+window.cerrarTicket=function(){document.getElementById('ticketOverlay').style.display='none';};
+
+// ── Drag + Escape del modal del ticket ──
+(function(){
+  const modalEl = ()=>document.getElementById('ticketModal');
+  const headerEl = ()=>document.getElementById('ticketModalHeader');
+  const overlayEl = ()=>document.getElementById('ticketOverlay');
+  let dragging=false, ox=0, oy=0;
+  function startDrag(cx,cy,target){
+    const h=headerEl(); if(!h||!h.contains(target)) return false;
+    dragging=true;
+    const r=modalEl().getBoundingClientRect();
+    ox=cx-r.left; oy=cy-r.top;
+    modalEl()._moved=true;
+    return true;
+  }
+  function moveDrag(cx,cy){
+    if(!dragging) return;
+    const el=modalEl();
+    let nx=cx-ox, ny=cy-oy;
+    nx=Math.max(0,Math.min(nx,window.innerWidth-el.offsetWidth));
+    ny=Math.max(0,Math.min(ny,window.innerHeight-el.offsetHeight));
+    el.style.left=nx+'px'; el.style.top=ny+'px';
+  }
+  document.addEventListener('mousedown', e=>{ if(startDrag(e.clientX,e.clientY,e.target)) e.preventDefault(); });
+  document.addEventListener('mousemove', e=>moveDrag(e.clientX,e.clientY));
+  document.addEventListener('mouseup', ()=>{ dragging=false; });
+  document.addEventListener('touchstart', e=>{ startDrag(e.touches[0].clientX,e.touches[0].clientY,e.target); },{passive:true});
+  document.addEventListener('touchmove', e=>moveDrag(e.touches[0].clientX,e.touches[0].clientY),{passive:true});
+  document.addEventListener('touchend', ()=>{ dragging=false; });
+  // Escape cierra el modal del ticket (sin limpiar el carrito)
+  document.addEventListener('keydown', e=>{
+    if(e.key==='Escape' && overlayEl() && overlayEl().style.display!=='none'){
+      cerrarTicket();
+    }
+  });
+})();
 
 // ── Favoritos ──
 
