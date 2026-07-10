@@ -437,7 +437,7 @@ const FIREBASE_URL = 'https://jpsoft---gestor-default-rtdb.firebaseio.com';
 const app = initializeApp({ databaseURL: FIREBASE_URL });
 const db  = getDatabase(app);
 
-let allProducts=[], filtered=[], activeFilter='Todos', page=1;
+let allProducts=[], filtered=[], activeFilter='Todos', page=1, provOrder=[];
 const PAGE_SIZE=50, gananciaMap={}, useSugeridoMap={}, provColorMap={};
 const BADGE_COLORS=['b0','b1','b2','b3','b4','b5','b6'];
 
@@ -488,6 +488,7 @@ function aplicarDatos(data){
   Object.keys(provColorMap).forEach(k => delete provColorMap[k]);
 
   allProducts = data.products || [];
+  provOrder = data.proveedores || [];
   Object.assign(gananciaMap, data.gananciaMap||{});
   Object.assign(useSugeridoMap, data.useSugeridoMap||{});
 
@@ -566,10 +567,21 @@ function mostrarError(msg){
 }
 
 // ── UI ──
+// Ordena proveedores según el orden del libro maestro (provOrder).
+// Los que no figuren van al final, en orden alfabético.
+function ordenProveedores(lista){
+  return [...lista].sort((a,b)=>{
+    const ia=provOrder.indexOf(a), ib=provOrder.indexOf(b);
+    if(ia<0&&ib<0) return a.localeCompare(b,'es');
+    if(ia<0) return 1;
+    if(ib<0) return -1;
+    return ia-ib;
+  });
+}
 function buildGananciasPanel(){
   const c=document.getElementById('gananciasContainer');
   c.innerHTML='';
-  Object.keys(gananciaMap).forEach(prov=>{
+  ordenProveedores(Object.keys(gananciaMap)).forEach(prov=>{
     const g=gananciaMap[prov],useDir=useSugeridoMap[prov];
     const id='gan_'+prov.replace(/\W+/g,'_');
     if(useDir){c.innerHTML+=`<div class="gan-row" style="opacity:.6"><span class="gan-name" title="${prov}">${prov}</span><span style="font-size:10px;color:#aaa;font-style:italic">P. Sugerido</span></div>`;return;}
@@ -586,7 +598,7 @@ window.updateGanancia = function(prov,val,valId){
 };
 
 function buildFilters(){
-  const provs=[...new Set(allProducts.map(p=>p.proveedor))];
+  const provs=ordenProveedores([...new Set(allProducts.map(p=>p.proveedor))]);
   document.getElementById('statProv').textContent=provs.length;
   const row=document.getElementById('filtersRow');
   row.innerHTML='';
