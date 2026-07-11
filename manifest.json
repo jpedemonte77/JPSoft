@@ -3,7 +3,7 @@
   "short_name": "JPSoft DJ",
   "description": "JPSoft Dietética Josué",
   "start_url": "/JPSoft/index.html",
-  "scope": "",
+  "scope": "/JPSoft/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
