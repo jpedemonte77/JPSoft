@@ -1,7 +1,7 @@
 {
-  "name": "JPSoft | Dietética Josué",
-  "short_name": "JPSoft | DJ",
-  "description": "Gestor de precios y proveedores para dietéticas",
+  "name": "JPSoft DJ",
+  "short_name": "JPSoft DJ",
+  "description": "JPSoft Dietética Josué",
   "start_url": "/JPSoft/index.html",
   "scope": "/JPSoft/",
   "display": "standalone",
