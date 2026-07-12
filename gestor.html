@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="JPSoft">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<title>JPSoft</title>
+<title>JPSoft | Gestor</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',system-ui,sans-serif;background:#f7f7f8;color:#111;min-height:100vh;display:flex;flex-direction:column;font-size:15px}
@@ -435,7 +435,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebas
 // ════════════════════════════════════════════════════════
 import { getDatabase, ref, onValue, set, get } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
-const FIREBASE_URL = 'https://jpsoft---gestor-default-rtdb.firebaseio.com';
+const FIREBASE_URL = 'https://---gestor-default-rtdb.firebaseio.com';
 const app = initializeApp({ databaseURL: FIREBASE_URL });
 const db  = getDatabase(app);
 
@@ -940,7 +940,7 @@ window.confirmarNuevaVenta=function(){
     rowsHtml+=`<div class="ticket-row"><span class="ticket-name">${detalle}</span><span class="ticket-price">${fmtDec(sub)}</span></div>`;
   });
   document.getElementById('ticketPreview').innerHTML=`
-    <div class="ticket-brand">JPSoft | Dietética Josué</div>
+    <div class="ticket-brand">JPSoft | Gestor</div>
     <div class="ticket-date">${fecha} — ${hora} hs</div>
     ${rowsHtml}
     <hr class="ticket-divider">
@@ -969,7 +969,7 @@ window.imprimirTicket = function(){
     return `<div class="row"><span class="name">${det}</span><span class="price">${fmtDec(sub)}</span></div>`;
   }).join('');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-    <title>Ticket — JPSoft | Dietética Josué</title>
+    <title>Ticket — JPSoft | Gestor</title>
     <style>
       *{box-sizing:border-box;margin:0;padding:0}
       body{font-family:'Courier New',monospace;font-size:13px;padding:20px;color:#111;max-width:300px}
@@ -982,7 +982,7 @@ window.imprimirTicket = function(){
       .total{display:flex;justify-content:space-between;font-family:sans-serif;font-weight:700;font-size:15px}
       @media print{body{padding:0}}
     </style></head><body>
-    <div class="brand">JPSoft | Dietética Josué</div>
+    <div class="brand">JPSoft | Gestor</div>
     <div class="date">${fecha} — ${hora} hs</div>
     ${rowsHtml}
     <hr class="divider">
@@ -1004,7 +1004,7 @@ window.guardarTicket = function(){
     else if(qty>1) det+=` x${qty}`;
     return `${det.padEnd(35,'.')} ${fmtDec(sub)}`;
   }).join('\n');
-  const contenido=`JPSoft | Dietética Josué\n${fecha} — ${hora} hs\n\n${lineas}\n${'─'.repeat(45)}\nTOTAL: ${fmtDec(total)}`;
+  const contenido=`JPSoft | Gestor\n${fecha} — ${hora} hs\n\n${lineas}\n${'─'.repeat(45)}\nTOTAL: ${fmtDec(total)}`;
   const blob=new Blob([contenido],{type:'text/plain;charset=utf-8'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
