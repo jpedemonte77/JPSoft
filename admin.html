@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
-<title>JPSoft | Admin</title>
+<title>JPSoft</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -52,6 +52,10 @@ select:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px r
   .table-wrap-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
   table{min-width:320px}
 }
+.nav-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.btn-home{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1px solid rgba(0,0,0,0.12);background:#fff;color:#333;text-decoration:none;font-size:13px;cursor:pointer;transition:background .15s}
+.btn-home:hover{background:#f4f4f5;color:#111}
+.btn-home svg{width:14px;height:14px}
 </style>
 </head>
 <body>
@@ -59,7 +63,7 @@ select:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px r
 <!-- LOGIN -->
 <div id="loginWrap">
   <div class="card">
-    <div class="brand">JPSoft | Administración</div>
+    <div class="brand">Administración</div>
     <div class="sub">Ingresá tus credenciales para continuar</div>
     <label>Email</label>
     <input type="text" id="loginEmail" placeholder="tu@email.com" onkeydown="if(event.key==='Enter')doLogin()">
@@ -72,7 +76,10 @@ select:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px r
 
 <!-- ADMIN -->
 <div id="adminWrap" style="display:none">
-  <div class="logout" onclick="doLogout()">✕ Cerrar sesión</div>
+  <div class="nav-top">
+    <a class="btn-home" href="index.html" title="Inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.8V21h14V9.8"/><path d="M9 21v-6h6v6"/></svg> Inicio</a>
+    <div class="logout" onclick="doLogout()">✕ Cerrar sesión</div>
+  </div>
   <div class="card">
     <div class="brand">Actualizar listas de precios</div>
     <div class="sub">Cargá el Excel con las hojas de proveedores</div>
