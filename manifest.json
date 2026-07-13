@@ -1,6 +1,6 @@
 {
-  "name": "JPSoft Gestor",
-  "short_name": "JPSoft Gestor",
+  "name": "JPSoft | Gestor",
+  "short_name": "JPSoft | Gestor",
   "description": "Gestor de proveedores y precios",
   "start_url": "/JPSoft/index.html",
   "scope": "/JPSoft/",
