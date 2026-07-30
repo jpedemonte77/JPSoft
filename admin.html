@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
-<title></title>
+<title>JPSoft</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -1013,61 +1013,59 @@ function mostrarResultadoConv(prov, productos, ganancia, fileName, extra={}){
 window.descargarConvertido = function(){
   if(!convData) return;
   const {prov, productos, ganancia, mes, fechaSerial} = convData;
-  const wb = XLSX.utils.book_new();
-  let aoa, ws;
+  // ── Exportación con el formato de las hojas del libro maestro ──
+  // A1=proveedor · A2=fecha · E3='% GANANCIA:' · E4=ganancia · fila 5=encabezados · fila 6+=datos
+  const ANCHOS_MAESTRO = {
+    'POLIMIEL':       [19,   17.3, 75.7, 15.3, 13],
+    'NUEVA ESTRELLA': [20.4, 20.7, 78,   16.6, 13],
+    'G NATURALE':     [15,   19.7, 72.4, 14,   16.4],
+    'FITOFARM':       [14,   16,   60,   14,   15.6],
+    'TAHONA':         [12.1, 18,   70.1, 14,   16.9],
+    'PROGEN':         [10.1, 19.3, 52.4, 14.7, 17.6]
+  };
+  const NOMBRE_ARCHIVO = {
+    'POLIMIEL':'Polimiel', 'NUEVA ESTRELLA':'Nueva Estrella', 'G NATURALE':'G Naturale',
+    'FITOFARM':'Fitofarm', 'TAHONA':'Tahona', 'PROGEN':'Progen'
+  };
 
-  if(prov === 'G NATURALE'){
-    // Formato exacto del modelo G NATURALE
-    // Fecha: convertir serial xls a fecha JS
-    let fechaStr = '';
-    if(fechaSerial){
-      // Serial xls: días desde 1/1/1900 (con bug del año bisiesto 1900)
-      const d = new Date(Math.round((fechaSerial - 25569) * 86400 * 1000));
-      fechaStr = d.toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit', year:'numeric'});
-    } else {
-      fechaStr = new Date().toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit', year:'numeric'});
-    }
-    aoa = [
-      ['G NATURALE', fechaStr, null, null, null],
-      [null, null, null, null, '% Ganancia:'],
-      [null, null, null, null, ganancia],
-      ['ID', 'CODIGO', 'PRODUCTO', 'P. LISTA', 'P. VENTA'],
-      ...productos.map(p=>[p.id||null, p.cod, p.nombre, p.lista, null])
-    ];
-    ws = XLSX.utils.aoa_to_sheet(aoa);
-    // Códigos como texto, precios sin decimales alineados izquierda
-    productos.forEach((p, i)=>{
-      const r = i + 4;
-      const codRef = XLSX.utils.encode_cell({r, c: 1});
-      if(ws[codRef]) ws[codRef].t = 's';
-      const listaRef = XLSX.utils.encode_cell({r, c: 3});
-      if(ws[listaRef]){ ws[listaRef].z = '#,##0'; ws[listaRef].t = 'n'; }
-    });
-    ws['!cols'] = [{wch:12},{wch:18},{wch:52},{wch:14},{wch:14}];
-  } else {
-    // Resto de proveedores — formato original
-    aoa = [
-      [prov, mes, null, null, null],
-      [null, null, null, null, null],
-      [null, null, null, '% GANANCIA:', null],
-      [null, null, null, ganancia, null],
-      ['ID', 'CODIGO', 'PRODUCTO', 'P. LISTA', 'P. VENTA'],
-      ...productos.map(p=>[p.id||null, p.cod, p.nombre, p.lista, null])
-    ];
-    ws = XLSX.utils.aoa_to_sheet(aoa);
-    productos.forEach((p, i)=>{
-      const rowIdx = i + 5;
-      const codRef = XLSX.utils.encode_cell({r: rowIdx, c: 1});
-      if(ws[codRef]) ws[codRef].t = 's';
-      const listaRef = XLSX.utils.encode_cell({r: rowIdx, c: 3});
-      if(ws[listaRef]) ws[listaRef].z = '"$"#,##0';
-    });
-    ws['!cols'] = [{wch:8},{wch:16},{wch:45},{wch:12},{wch:12}];
+  const wb = XLSX.utils.book_new();
+
+  // Fecha de la lista: usa el serial del archivo original si existe, si no hoy
+  let fechaLista = new Date();
+  if(fechaSerial){
+    fechaLista = new Date(Math.round((fechaSerial - 25569) * 86400 * 1000));
   }
 
+  const aoa = [
+    [prov, null, null, null, null],
+    [fechaLista, null, null, null, null],
+    [null, null, null, null, '% GANANCIA:'],
+    [null, null, null, null, ganancia],
+    ['ID', 'CODIGO', 'PRODUCTO', 'P. LISTA', 'P. VENTA'],
+    ...productos.map(p => [p.id || null, p.cod || null, p.nombre, p.lista, null])
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(aoa, {cellDates:true});
+
+  if(ws['A2']) ws['A2'].z = 'mm-dd-yy';
+  if(ws['E4']) ws['E4'].z = '0%';
+
+  productos.forEach((p, i) => {
+    const r = i + 5;                       // 0-based: fila 6 = índice 5
+    const idRef   = XLSX.utils.encode_cell({r, c:0});
+    const codRef  = XLSX.utils.encode_cell({r, c:1});
+    const listRef = XLSX.utils.encode_cell({r, c:3});
+    if(ws[idRef])   { ws[idRef].t = 's';   ws[idRef].z = '@'; }
+    if(ws[codRef])  { ws[codRef].t = 's';  ws[codRef].z = '@'; }
+    if(ws[listRef]) { ws[listRef].t = 'n'; ws[listRef].z = '"$"#,##0'; }
+  });
+
+  ws['!cols'] = (ANCHOS_MAESTRO[prov] || [14,16,60,14,15]).map(x => ({wch:x}));
+
   XLSX.utils.book_append_sheet(wb, ws, prov);
-  const fechaArchivo = new Date().toLocaleDateString('es-AR').replace(/\//g,'-');
-  XLSX.writeFile(wb, `${prov}_convertido_${fechaArchivo}.xlsx`);
+
+  const hoy = new Date();
+  const fechaArchivo = `${String(hoy.getDate()).padStart(2,'0')}-${String(hoy.getMonth()+1).padStart(2,'0')}-${hoy.getFullYear()}`;
+  XLSX.writeFile(wb, `${NOMBRE_ARCHIVO[prov] || prov} ${fechaArchivo}.xlsx`);
 };
 
 // ── FITOFARM: leer PDF guardado desde el browser ──
