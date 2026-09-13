@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="/JPSoft/manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Dietética Josué">
+<link rel="apple-touch-icon" href="/JPSoft/icon-192.png">
+<link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<title>Dietética Josué</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;height:100dvh;overflow:hidden}
+body{font-family:'DM Sans',system-ui,sans-serif;background:#f7f7f8;color:#111;display:flex;justify-content:center;align-items:center;padding:1rem}
+.card{background:#fff;border:1px solid rgba(0,0,0,0.08);border-radius:14px;padding:2.5rem 2rem;width:100%;max-width:300px;text-align:center}
+.brand{font-size:18px;font-weight:600;color:#111;margin-bottom:6px}
+.sub{font-size:13px;color:#999;margin-bottom:2rem}
+.divider{height:1px;background:rgba(0,0,0,0.06);margin-bottom:1.5rem}
+a{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:13px 16px;border-radius:8px;text-decoration:none;border:1px solid rgba(0,0,0,0.1);background:#fff;color:#111;font-weight:500;font-size:14px;transition:all .15s}
+a:last-child{margin-bottom:0}
+a:hover{background:#f7f7f8;border-color:rgba(0,0,0,0.2)}
+a.primary{background:#111;color:#fff;border-color:#111}
+a.primary:hover{background:#333;border-color:#333}
+.arrow{font-size:16px;opacity:.5}
+a.primary .arrow{opacity:.7}
+
+/* Credito del desarrollador */
+.credito{text-align:center;font-size:12px;color:#999;line-height:1.7}
+.credito .cr-wa{display:inline-flex;align-items:center;gap:5px;color:#25D366;
+  text-decoration:none;font-weight:500;transition:opacity .15s}
+.credito .cr-wa:hover{opacity:.75}
+.credito .cr-wa svg{width:15px;height:15px;flex-shrink:0}
+.credito{margin-top:1.6rem}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">Dietética Josué</div>
+  <div class="sub"> </div>
+  <a href="admin.html">
+    Administración
+    <span class="arrow">→</span>
+  </a>
+  <a href="gestor.html" class="primary">
+    Productos
+    <span class="arrow">→</span>
+  </a>
+  <div class="credito"><div>Desarrollado por Joaquín Pedemonte</div><a class="cr-wa" href="https://wa.me/5493436615390" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.47-1.75-1.65-2.05-.17-.3-.02-.46.13-.6.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.6-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.01-1.04 2.470 1.46 1.06 2.87 1.21 3.07.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.69.63.71.22 1.36.19 1.87.12.57-.09 1.75-.72 2-1.41.25-.69.25-1.28.17-1.41-.07-.13-.27-.2-.57-.35z"/><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38c1.45.79 3.08 1.21 4.79 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 18.15h-.01c-1.52 0-3.01-.41-4.31-1.18l-.31-.18-3.2.84.85-3.12-.2-.32a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.23 8.24-8.23 2.2 0 4.27.86 5.82 2.42a8.18 8.18 0 0 1 2.41 5.82c0 4.54-3.69 8.23-8.23 8.23z"/></svg>+54 9 3436 61-5390</a></div>
+</div>
+
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/JPSoft/sw.js')
+      .then(reg => console.log('SW registrado:', reg.scope))
+      .catch(err => console.warn('SW error:', err));
+  });
+}
+</script>
+</body>
+</html>
