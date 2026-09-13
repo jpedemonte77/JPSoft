@@ -4,8 +4,8 @@ const ASSETS = [
   '/JPSoft/index.html',
   '/JPSoft/gestor.html',
   '/JPSoft/manifest.json',
-  '/JPSoft/icon-192.png',
-  '/JPSoft/icon-512.png'
+  '/JPSoft/icons/icon-192.png',
+  '/JPSoft/icons/icon-512.png'
 ];
 
 self.addEventListener('install', e => {
