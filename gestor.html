@@ -375,8 +375,13 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
 .ticket-brand img{height:30px;width:auto;display:block;margin:0 auto}
 
 /* Leyenda de la barra: centrada verticalmente sin que el margen la desplace */
-.tb-credito{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}
+.tb-credito{flex-direction:column;align-items:center;justify-content:center;gap:5px}
 .tb-credito .cr-dev{margin-bottom:0!important}
+
+/* Visibilidad de la leyenda: va al final para que ninguna regla la pise.
+   Arriba de 620px vive en la barra; por debajo, al pie de la pagina. */
+@media(min-width:621px){ .tb-credito{display:flex!important} }
+@media(max-width:620px){ .tb-credito{display:none!important} }
 </style>
 </head>
 <body>
