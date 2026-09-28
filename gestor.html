@@ -439,6 +439,38 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
   font-size:12.5px;color:#7a5510;line-height:1.5}
 .aviso-correccion b{font-weight:600;color:#5c3f0b}
 @media(max-width:900px){ .aviso-correccion{margin:0 16px 8px;font-size:12px;padding:7px 10px} }
+/* ── Lector con la cámara ── */
+.btn-camara{display:none;position:absolute;right:5px;top:50%;transform:translateY(-50%);
+  width:34px;height:34px;border:none;background:none;padding:0;cursor:pointer;
+  align-items:center;justify-content:center;color:#666;border-radius:8px;transition:background .15s}
+.btn-camara:active{background:rgba(0,0,0,0.07)}
+.btn-camara svg{width:20px;height:20px}
+/* Sólo en pantallas táctiles: en la PC ya está el lector físico */
+@media(pointer:coarse){
+  .btn-camara{display:flex}
+  .search-wrap input{padding-right:42px}
+}
+
+.escaner{position:fixed;inset:0;background:#000;z-index:400;display:none;
+  align-items:center;justify-content:center;overflow:hidden}
+.escaner video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.escaner-marco{position:relative;width:min(80vw,330px);height:min(40vw,175px);
+  border-radius:14px;border:2px solid rgba(255,255,255,0.92);
+  box-shadow:0 0 0 100vmax rgba(0,0,0,0.5);z-index:1}
+.escaner-texto{position:absolute;bottom:13%;left:0;right:0;text-align:center;color:#fff;
+  font-size:14px;line-height:1.5;padding:0 26px;text-shadow:0 1px 4px rgba(0,0,0,0.7);z-index:2}
+.escaner-barra{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;
+  justify-content:space-between;padding:14px 16px;z-index:3}
+.escaner-btn{width:40px;height:40px;border-radius:50%;border:none;background:rgba(0,0,0,0.45);
+  color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-size:17px;line-height:1;padding:0;font-family:inherit}
+.escaner-btn svg{width:20px;height:20px}
+.escaner-btn.encendida{background:#fff;color:#111}
+.escaner-error{position:absolute;inset:0;display:none;flex-direction:column;
+  align-items:center;justify-content:center;gap:18px;padding:34px;background:#111;
+  color:#fff;font-size:14px;text-align:center;line-height:1.6;z-index:4}
+.escaner-error button{padding:10px 20px;border-radius:8px;border:1px solid rgba(255,255,255,0.3);
+  background:none;color:#fff;font-size:13px;cursor:pointer;font-family:inherit}
 </style>
 </head>
 <body>
@@ -480,6 +512,9 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
         <div class="search-wrap" id="searchWrap">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <input type="text" id="searchInput" placeholder="" oninput="applyFilters();trackBusqueda(this.value)">
+          <button class="btn-camara" id="btnCamara" onclick="abrirEscaner()" title="Escanear con la cámara" aria-label="Escanear con la cámara">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V6a1 1 0 0 1 1-1h2"/><path d="M18 5h2a1 1 0 0 1 1 1v2"/><path d="M21 16v2a1 1 0 0 1-1 1h-2"/><path d="M6 19H4a1 1 0 0 1-1-1v-2"/><path d="M7 9v6"/><path d="M10 9v6"/><path d="M13.5 9v6"/><path d="M17 9v6"/></svg>
+          </button>
         </div>
         <button class="btn-refresh btn-refresh-mobile" id="btnRefreshMobile" onclick="actualizarGestor(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg> Actualizar</button>
 
@@ -583,6 +618,24 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
   </div>
 </div>
 
+
+<!-- Lector con la cámara -->
+<div class="escaner" id="escaner" style="display:none">
+  <video id="escanerVideo" playsinline muted autoplay></video>
+  <div class="escaner-marco"></div>
+  <div class="escaner-texto">Apuntá al código de barras del producto</div>
+  <div class="escaner-barra">
+    <button class="escaner-btn" id="escanerLuz" style="display:none" title="Linterna" aria-label="Linterna">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6v4l-2 3v11a1 1 0 0 1-2 0V9L9 6V2z"/><path d="M9 6h6"/></svg>
+    </button>
+    <span></span>
+    <button class="escaner-btn" onclick="cerrarEscaner()" title="Cerrar" aria-label="Cerrar">&#10005;</button>
+  </div>
+  <div class="escaner-error" id="escanerError">
+    <span></span>
+    <button onclick="cerrarEscaner()">Cerrar</button>
+  </div>
+</div>
 
 <!-- Panel de Estadísticas -->
 <div class="est-overlay" id="estOverlay" style="display:none" onclick="if(event.target===this)cerrarEstadisticas()">
@@ -1402,6 +1455,11 @@ document.addEventListener('keydown',e=>{
     if(e.key==='Escape'){input.value='';applyFilters();input.blur();}
     return;
   }
+  // Con el lector de cámara abierto, la pantalla es suya
+  if(typeof Escaner!=='undefined' && Escaner.abierto()){
+    if(e.key==='Escape') Escaner.cerrar();
+    return;
+  }
   // Con el panel de estadísticas abierto, el tipeo no va al buscador de atrás
   const estAbierto=document.getElementById('estOverlay');
   if(estAbierto&&estAbierto.style.display!=='none'){
@@ -1955,6 +2013,150 @@ window.cerrarEstadisticas = function(){
   document.getElementById('estOverlay').style.display = 'none';
 };
 window.verEstadisticas = verEstadisticas;
+
+// ══════════════════════════════════════════════════════════════════
+//  LECTOR DE CÓDIGO DE BARRAS CON LA CÁMARA
+//  Usa el lector que ya trae el navegador (BarcodeDetector), así que
+//  no descarga ninguna librería y funciona también sin internet.
+//  El código leído entra por el MISMO camino que el lector físico de
+//  la PC: se escribe en el buscador y se registra igual.
+// ══════════════════════════════════════════════════════════════════
+const Escaner = (function(){
+  const FORMATOS = ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf'];
+  const CADA = 180;            // cada cuánto se mira la imagen (ms)
+
+  let det = null, stream = null, video = null, lazo = null, ocupado = false;
+
+  function hayLector(){
+    return typeof window !== 'undefined' && 'BarcodeDetector' in window &&
+           navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+  }
+
+  async function crearDetector(){
+    let disponibles = [];
+    try{ disponibles = await BarcodeDetector.getSupportedFormats(); }catch(e){}
+    const formats = FORMATOS.filter(f => disponibles.includes(f));
+    return formats.length ? new BarcodeDetector({ formats }) : new BarcodeDetector();
+  }
+
+  function error(texto){
+    const e = document.getElementById('escanerError');
+    if(!e) return;
+    e.querySelector('span').textContent = texto;
+    e.style.display = 'flex';
+  }
+
+  function textoDelFallo(e){
+    const n = e && e.name;
+    if(n === 'NotAllowedError' || n === 'SecurityError')
+      return 'No hay permiso para usar la cámara. Tocá el candado al lado de la dirección de la página y habilitala.';
+    if(n === 'NotFoundError' || n === 'DevicesNotFoundError')
+      return 'No se encontró ninguna cámara en este dispositivo.';
+    if(n === 'NotReadableError')
+      return 'La cámara está siendo usada por otra aplicación. Cerrala y probá de nuevo.';
+    return 'No se pudo abrir la cámara. Probá cerrando y volviendo a abrir la página.';
+  }
+
+  // La linterna sirve de verdad: muchos códigos están en envases oscuros
+  function prepararLuz(){
+    const btn = document.getElementById('escanerLuz');
+    if(!btn || !stream) return;
+    const pista = stream.getVideoTracks()[0];
+    const caps = pista.getCapabilities ? pista.getCapabilities() : {};
+    if(!caps || !caps.torch){ btn.style.display = 'none'; return; }
+    btn.style.display = 'flex';
+    btn.classList.remove('encendida');
+    btn.onclick = async () => {
+      const prender = !btn.classList.contains('encendida');
+      try{
+        await pista.applyConstraints({ advanced: [{ torch: prender }] });
+        btn.classList.toggle('encendida', prender);
+      }catch(e){ btn.style.display = 'none'; }
+    };
+  }
+
+  async function mirar(){
+    if(ocupado || !video || video.readyState < 2) return;
+    ocupado = true;
+    try{
+      const leidos = await det.detect(video);
+      for(const c of leidos){
+        const valor = String(c.rawValue || '').trim();
+        // Sólo códigos numéricos de largo razonable: evita leer cualquier cosa
+        if(/^\d{6,14}$/.test(valor)){ aceptar(valor); return; }
+      }
+    }catch(e){ /* un cuadro fallido no es problema: se intenta con el siguiente */ }
+    ocupado = false;
+  }
+
+  function aceptar(codigo){
+    if(navigator.vibrate) { try{ navigator.vibrate(45); }catch(e){} }
+    cerrar();
+    const inp = document.getElementById('searchInput');
+    if(!inp) return;
+    inp.value = codigo;
+    applyFilters();
+    trackEscaneo(codigo);          // mismo registro que el lector físico
+    if(typeof setScanState === 'function') setScanState('read');
+    inp.focus();
+  }
+
+  async function abrir(){
+    const ov = document.getElementById('escaner');
+    if(!ov) return;
+    ov.style.display = 'flex';
+    const err = document.getElementById('escanerError');
+    if(err) err.style.display = 'none';
+    ocupado = false;
+    try{
+      if(!det) det = await crearDetector();
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' },
+                 width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      video = document.getElementById('escanerVideo');
+      video.srcObject = stream;
+      video.setAttribute('playsinline', '');
+      await video.play();
+      prepararLuz();
+      lazo = setInterval(mirar, CADA);
+    }catch(e){
+      error(textoDelFallo(e));
+    }
+  }
+
+  function cerrar(){
+    if(lazo){ clearInterval(lazo); lazo = null; }
+    if(stream){ stream.getTracks().forEach(t => { try{ t.stop(); }catch(e){} }); stream = null; }
+    if(video){ video.srcObject = null; }
+    const ov = document.getElementById('escaner');
+    if(ov) ov.style.display = 'none';
+    ocupado = false;
+  }
+
+  function abierto(){
+    const ov = document.getElementById('escaner');
+    return !!ov && ov.style.display !== 'none';
+  }
+
+  // Si la app pasa a segundo plano, se apaga la cámara
+  document.addEventListener('visibilitychange', () => { if(document.hidden && abierto()) cerrar(); });
+
+  return { abrir, cerrar, abierto, hayLector };
+})();
+
+window.abrirEscaner  = function(){ Escaner.abrir(); };
+window.cerrarEscaner = function(){ Escaner.cerrar(); };
+
+// Si el navegador no sabe leer códigos, el botón no se muestra
+(function(){
+  const poner = () => {
+    const b = document.getElementById('btnCamara');
+    if(b && !Escaner.hayLector()) b.style.display = 'none';
+  };
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', poner);
+  else poner();
+})();
 </script>
 
 <script>
