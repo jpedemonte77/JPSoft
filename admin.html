@@ -86,6 +86,20 @@ select:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px r
 .mb-cancelar:hover{background:#f7f7f8;color:#111}
 .mb-borrar{background:#c0391a;color:#fff;border-color:#c0391a}
 .mb-borrar:hover{background:#a52f14;border-color:#a52f14}
+/* Codigos cargados a mano */
+.cod-tabla{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}
+.cod-tabla th{font-size:10.5px;font-weight:500;color:#999;text-align:left;padding:6px 8px;
+  border-bottom:1px solid rgba(0,0,0,0.06);background:#f7f7f8;white-space:nowrap}
+.cod-tabla td{padding:7px 8px;border-bottom:1px solid rgba(0,0,0,0.04);color:#111;vertical-align:top}
+.cod-tabla tr:last-child td{border-bottom:none}
+.cod-num{font-family:'DM Mono',ui-monospace,monospace;font-size:12px;white-space:nowrap}
+.cod-fecha{color:#aaa;font-size:11px;white-space:nowrap}
+.cod-prov{font-size:11px;color:#777}
+.cod-borrar{border:none;background:none;color:#c0391a;cursor:pointer;font-size:15px;
+  padding:2px 6px;border-radius:6px;line-height:1;font-family:inherit}
+.cod-borrar:hover{background:rgba(192,57,26,0.08)}
+.cod-vacio{font-size:12.5px;color:#bbb;padding:14px 0;line-height:1.6}
+.cod-scroll{max-height:340px;overflow-y:auto;margin-top:4px}
 </style>
 </head>
 <body>
@@ -160,6 +174,18 @@ select:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px r
       Borrar todas las estadísticas
     </button>
     <div class="status-box" id="statsMsg" style="display:none"></div>
+  </div>
+
+  <!-- CÓDIGOS CARGADOS A MANO -->
+  <div class="card" id="codCard" style="margin-top:1rem">
+    <div class="brand">Códigos de barras cargados a mano</div>
+    <div class="sub">Los que se asociaron desde Productos, en el celular o en la PC</div>
+    <div class="status-box" style="margin-top:0">
+      Revisá que cada código corresponda al producto correcto. Uno mal asociado
+      muestra <strong>el precio de otro producto</strong>.
+    </div>
+    <div class="cod-scroll"><div id="codLista"></div></div>
+    <button class="btn btn-outline" onclick="cargarCodigos()" style="margin-top:1rem">Actualizar lista</button>
   </div>
 
   <!-- CONVERSOR -->
@@ -247,6 +273,7 @@ onAuthStateChanged(auth, user => {
     document.getElementById('adminWrap').style.display = 'block';
     cargarUltimaActualizacion();
     limpiarEstadisticasViejas();
+    cargarCodigos();
   } else {
     document.getElementById('loginWrap').style.display = 'block';
     document.getElementById('adminWrap').style.display = 'none';
@@ -1294,6 +1321,66 @@ window.borrarStats = async function(){
       'cerrala y volvé a abrirla para arrancar del todo limpio.';
   }catch(e){
     caja.innerHTML = '<span class="badge-err">Error</span> No se pudieron borrar: ' + e.message;
+  }
+};
+// ── Códigos de barras cargados a mano ──
+// Viven en el nodo "codigos", fuera del libro maestro, contra una clave
+// de proveedor + nombre que sobrevive a las publicaciones de precios.
+let CODIGOS_CARGADOS = {};
+
+function codFecha(t){
+  if(!t) return '';
+  const d = new Date(t);
+  return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}) + ' ' +
+         d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false});
+}
+
+function codEsc(s){
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+window.cargarCodigos = async function(){
+  const cont = document.getElementById('codLista');
+  if(!cont) return;
+  cont.innerHTML = '<div class="cod-vacio">Cargando...</div>';
+  try{
+    const snap = await get(ref(db, 'codigos'));
+    CODIGOS_CARGADOS = snap.exists() ? (snap.val() || {}) : {};
+  }catch(e){
+    cont.innerHTML = '<div class="cod-vacio">No se pudieron leer los códigos: ' + codEsc(e.message) + '</div>';
+    return;
+  }
+  const filas = Object.entries(CODIGOS_CARGADOS)
+    .filter(([, v]) => v && v.c)
+    .sort((a, b) => (b[1].t || 0) - (a[1].t || 0));
+
+  if(!filas.length){
+    cont.innerHTML = '<div class="cod-vacio">Todavía no se cargó ningún código a mano.<br>' +
+      'Se cargan desde Productos: al escanear algo que no está, aparece la opción de asociarlo.</div>';
+    return;
+  }
+  cont.innerHTML = '<table class="cod-tabla"><thead><tr>' +
+    '<th>Producto</th><th>Código</th><th>Cuándo</th><th></th></tr></thead><tbody>' +
+    filas.map(([k, v]) =>
+      '<tr><td>' + codEsc(v.n) + '<div class="cod-prov">' + codEsc(v.p) + '</div></td>' +
+      '<td class="cod-num">' + codEsc(v.c) + '</td>' +
+      '<td class="cod-fecha">' + codFecha(v.t) + '</td>' +
+      '<td><button class="cod-borrar" title="Borrar" onclick="borrarCodigo(\'' +
+        codEsc(k).replace(/'/g, "\\'") + '\')">&#10005;</button></td></tr>'
+    ).join('') + '</tbody></table>' +
+    '<div class="cod-fecha" style="padding:8px 8px 0">' + filas.length + ' en total</div>';
+};
+
+window.borrarCodigo = async function(clave){
+  const v = CODIGOS_CARGADOS[clave];
+  if(!v) return;
+  if(!confirm('¿Borrar el código ' + v.c + ' de "' + v.n + '"?')) return;
+  try{
+    await set(ref(db, 'codigos/' + clave), null);
+    await cargarCodigos();
+  }catch(e){
+    alert('No se pudo borrar: ' + e.message);
   }
 };
 </script>
