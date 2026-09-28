@@ -471,6 +471,63 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
   color:#fff;font-size:14px;text-align:center;line-height:1.6;z-index:4}
 .escaner-error button{padding:10px 20px;border-radius:8px;border:1px solid rgba(255,255,255,0.3);
   background:none;color:#fff;font-size:13px;cursor:pointer;font-family:inherit}
+/* ── Aviso de código sin asociar ── */
+.aviso-codigo{display:none;margin:0 20px 10px;padding:9px 12px;border-radius:8px;
+  background:rgba(26,90,160,0.05);border:1px solid rgba(26,90,160,0.16);
+  font-size:12.5px;color:#2a4d73;line-height:1.5;align-items:center;gap:12px;flex-wrap:wrap}
+.aviso-codigo b{font-weight:600;color:#1b3a5c;font-family:'DM Mono',ui-monospace,monospace}
+.aviso-codigo button{margin-left:auto;padding:6px 13px;border-radius:7px;border:1px solid rgba(26,90,160,0.3);
+  background:#fff;color:#1f4a78;font-size:12.5px;font-weight:500;cursor:pointer;
+  font-family:inherit;white-space:nowrap;transition:background .15s}
+.aviso-codigo button:hover{background:rgba(26,90,160,0.06)}
+@media(max-width:900px){
+  .aviso-codigo{margin:0 16px 8px;font-size:12px}
+  .aviso-codigo button{margin-left:0;width:100%;padding:9px}
+}
+
+/* ── Pantalla de asociación ── */
+.vinc-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.38);z-index:420;display:none;
+  align-items:center;justify-content:center;padding:16px}
+.vinc-modal{background:#fff;border-radius:14px;width:520px;max-width:100%;
+  max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+  border:1px solid rgba(0,0,0,0.08);box-shadow:0 8px 32px rgba(0,0,0,0.2)}
+.vinc-head{display:flex;align-items:flex-start;gap:10px;padding:14px 18px;
+  border-bottom:1px solid rgba(0,0,0,0.06);flex-shrink:0}
+.vinc-title{font-size:14px;font-weight:600;color:#111}
+.vinc-cod{font-family:'DM Mono',ui-monospace,monospace;font-size:13px;color:#777;margin-top:2px}
+.vinc-head .est-close{margin-left:auto}
+.vinc-body{padding:14px 18px 18px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#vincBuscar{width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;
+  font-size:15px;background:#f7f7f8;color:#111;outline:none;font-family:inherit;margin-bottom:10px}
+#vincBuscar:focus{background:#fff;border-color:rgba(0,0,0,0.3);box-shadow:0 0 0 3px rgba(0,0,0,0.05)}
+.vinc-item{display:flex;flex-direction:column;gap:4px;width:100%;text-align:left;
+  padding:9px 10px;border:none;border-bottom:1px solid rgba(0,0,0,0.05);background:none;
+  cursor:pointer;font-family:inherit;transition:background .12s}
+.vinc-item:hover{background:#f7f7f8}
+.vinc-nom{font-size:13px;color:#111;line-height:1.35}
+.vinc-meta{display:flex;align-items:center;gap:8px}
+.vinc-ya{font-size:10.5px;color:#b0873a;font-family:'DM Mono',ui-monospace,monospace}
+.vinc-vacio{font-size:12.5px;color:#bbb;padding:16px 0;text-align:center}
+.vinc-conf-nom{font-size:15px;color:#111;font-weight:500;line-height:1.4;margin-bottom:8px}
+.vinc-conf-prov{margin-bottom:12px}
+.vinc-conf-cod{font-family:'DM Mono',ui-monospace,monospace;font-size:19px;color:#111;
+  background:#f7f7f8;border:1px solid rgba(0,0,0,0.06);border-radius:8px;padding:10px 14px;
+  text-align:center;letter-spacing:.04em}
+.vinc-aviso{margin-top:12px;font-size:12px;color:#8a5a12;background:rgba(176,124,26,0.07);
+  border:1px solid rgba(176,124,26,0.2);border-radius:8px;padding:8px 11px;line-height:1.5}
+.vinc-botones{display:flex;gap:8px;margin-top:16px}
+.vinc-botones button{flex:1;padding:11px;border-radius:8px;font-size:14px;font-weight:500;
+  cursor:pointer;font-family:inherit;border:1px solid rgba(0,0,0,0.12)}
+.vinc-btn-volver{background:#fff;color:#555}
+.vinc-btn-volver:hover{background:#f7f7f8;color:#111}
+.vinc-btn-guardar{background:#111;color:#fff;border-color:#111}
+.vinc-btn-guardar:hover{background:#000}
+.vinc-btn-guardar:disabled{opacity:.5;cursor:default}
+.vinc-msg{font-size:12px;color:#999;text-align:center;margin-top:10px;min-height:16px}
+@media(max-width:620px){
+  .vinc-overlay{padding:8px}
+  .vinc-modal{max-height:calc(100vh - 16px)}
+}
 </style>
 </head>
 <body>
@@ -535,6 +592,7 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
   </div>
 
   <div class="aviso-correccion" id="avisoCorreccion"></div>
+  <div class="aviso-codigo" id="avisoCodigo"></div>
 
   <!-- Body -->
   <div class="body-area">
@@ -618,6 +676,37 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
   </div>
 </div>
 
+
+
+<!-- Asociar un código a un producto -->
+<div class="vinc-overlay" id="vincOverlay" style="display:none" onclick="if(event.target===this)cerrarVinculacion()">
+  <div class="vinc-modal">
+    <div class="vinc-head">
+      <div>
+        <div class="vinc-title">Asociar código a un producto</div>
+        <div class="vinc-cod" id="vincCodigo"></div>
+      </div>
+      <button class="est-close" onclick="cerrarVinculacion()" title="Cerrar">✕</button>
+    </div>
+    <div class="vinc-body">
+
+      <div id="vincBuscarWrap">
+        <input type="text" id="vincBuscar" placeholder="Buscá el producto por nombre" oninput="vincBuscar()">
+        <div id="vincLista"></div>
+      </div>
+
+      <div id="vincConfirmar" style="display:none">
+        <div id="vincResumen"></div>
+        <div class="vinc-botones">
+          <button class="vinc-btn-volver" onclick="vincVolver()">Elegir otro</button>
+          <button class="vinc-btn-guardar" id="vincBtnGuardar" onclick="vincGuardar()">Guardar</button>
+        </div>
+        <div class="vinc-msg" id="vincMsg"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
 
 <!-- Lector con la cámara -->
 <div class="escaner" id="escaner" style="display:none">
@@ -741,6 +830,87 @@ const db  = getDatabase(app);
 
 let allProducts=[], filtered=[], activeFilter='Todos', page=1, provOrder=[];
 let correccion = '';   // termino corregido de la ultima busqueda
+
+// ══════════════════════════════════════════════════════════════════
+//  CÓDIGOS DE BARRAS CARGADOS A MANO
+//  Viven en el nodo "codigos", APARTE de las listas de precios, por
+//  dos motivos:
+//   · La clave interna de cada producto lleva el número de fila y
+//     cambia en cada actualización. Guardar contra ella perdería
+//     todo dos veces por mes. Acá la clave es proveedor + nombre.
+//   · Al vivir fuera del libro maestro, ningún scraper puede pisarlos.
+// ══════════════════════════════════════════════════════════════════
+const Codigos = (function(){
+  let mapa = {};                 // clave → {p: proveedor, n: nombre, c: código, t: fecha}
+
+  // Huella corta del nombre completo. Sin esto, dos productos del mismo
+  // proveedor cuyos nombres coincidan en los primeros caracteres
+  // compartirían clave, y uno mostraría el precio del otro.
+  function huella(s){
+    let h = 5381;
+    for(let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+    return h.toString(36);
+  }
+
+  function claveDe(prov, desc){
+    const p = norm(prov || ''), n = norm(desc || '');
+    const base = (p + '__' + n).replace(/[.#$\[\]\/]/g, ' ')
+                               .replace(/\s+/g, ' ').trim().slice(0, 110);
+    return base + '__' + huella(p + '|' + n);
+  }
+
+  // Se aplican sobre los productos que vinieron SIN código del proveedor
+  function aplicar(){
+    let puestos = 0;
+    for(const p of allProducts){
+      if(p.codManual){            // se limpia lo puesto antes, por si se borró
+        p.cod = ''; p.normCod = ''; p.codManual = false;
+      }
+      if(p.cod) continue;
+      const e = mapa[claveDe(p.proveedor, p.desc)];
+      if(e && e.c){
+        p.cod = String(e.c);
+        p.normCod = norm(p.cod);
+        p.codManual = true;
+        puestos++;
+      }
+    }
+    return puestos;
+  }
+
+  // En tiempo real: un código cargado en el celular aparece al toque en la PC
+  function escuchar(){
+    onValue(ref(db, 'codigos'), snap => {
+      mapa = snap.exists() ? (snap.val() || {}) : {};
+      if(allProducts.length){
+        aplicar();
+        if(typeof applyFilters === 'function') applyFilters();
+      }
+    }, () => {});
+  }
+
+  function guardar(producto, codigo){
+    return set(ref(db, 'codigos/' + claveDe(producto.proveedor, producto.desc)), {
+      p: producto.proveedor,
+      n: producto.desc,
+      c: String(codigo),
+      t: Date.now()
+    });
+  }
+
+  // ¿Ese código ya está usado por otro producto? Avisar antes de duplicar
+  function yaUsado(codigo, producto){
+    const cod = String(codigo);
+    const claveActual = claveDe(producto.proveedor, producto.desc);
+    for(const [k, e] of Object.entries(mapa))
+      if(e && String(e.c) === cod && k !== claveActual) return e;
+    const otro = allProducts.find(p => String(p.cod || '') === cod &&
+                                       !(p.proveedor === producto.proveedor && p.desc === producto.desc));
+    return otro ? { p: otro.proveedor, n: otro.desc } : null;
+  }
+
+  return { claveDe, aplicar, escuchar, guardar, yaUsado };
+})();
 
 // ══════════════════════════════════════════════════════════════════
 //  BÚSQUEDA TOLERANTE A ERRORES DE TIPEO
@@ -1162,6 +1332,7 @@ function aplicarDatos(data){
 
   allProducts = data.products || [];
   provOrder = data.proveedores || [];
+  Codigos.aplicar();          // los cargados a mano, sobre los que vinieron sin código
   Object.assign(gananciaMap, data.gananciaMap||{});
   Object.assign(useSugeridoMap, data.useSugeridoMap||{});
 
@@ -1321,6 +1492,7 @@ window.applyFilters = function(){
   page=1;
   document.getElementById('statTotal').textContent=filtered.length.toLocaleString();
   mostrarCorreccion(raw);
+  mostrarOfrecerVinculo(raw);
   renderTable();
 };
 
@@ -1453,6 +1625,12 @@ document.addEventListener('keydown',e=>{
   if(document.activeElement===input){
     if(e.key==='Enter'){const val=input.value.trim();if(/^\d+$/.test(val)){e.preventDefault();applyFilters();trackEscaneo(val);}}
     if(e.key==='Escape'){input.value='';applyFilters();input.blur();}
+    return;
+  }
+  // Con la pantalla de asociación abierta, el tipeo es para ella
+  const vinc=document.getElementById('vincOverlay');
+  if(vinc && vinc.style.display!=='none'){
+    if(e.key==='Escape') cerrarVinculacion();
     return;
   }
   // Con el lector de cámara abierto, la pantalla es suya
@@ -2157,6 +2335,119 @@ window.cerrarEscaner = function(){ Escaner.cerrar(); };
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', poner);
   else poner();
 })();
+
+// ══════════════════════════════════════════════════════════════════
+//  PANTALLA PARA ASOCIAR UN CÓDIGO A UN PRODUCTO
+//  Se llega acá cuando se escaneó o tipeó un código que no está en
+//  ninguna lista. Funciona igual en el celular y en la PC.
+// ══════════════════════════════════════════════════════════════════
+let vincCodigo = '', vincElegido = null;
+
+function vincEsCodigo(texto){
+  return /^\d{6,14}$/.test(String(texto || '').trim());
+}
+
+// Se ofrece asociar sólo si la búsqueda quedó en cero y parece un código
+function mostrarOfrecerVinculo(raw){
+  const el = document.getElementById('avisoCodigo');
+  if(!el) return;
+  const t = String(raw || '').trim();
+  if(filtered.length || !vincEsCodigo(t)){ el.style.display = 'none'; return; }
+  el.innerHTML = '<span>El código <b>' + escaparHtml(t) + '</b> no está en ninguna lista.</span>' +
+    '<button onclick="abrirVinculacion(\'' + escaparHtml(t) + '\')">Asociarlo a un producto</button>';
+  el.style.display = 'flex';
+}
+
+window.abrirVinculacion = function(codigo){
+  vincCodigo = String(codigo || '').trim();
+  vincElegido = null;
+  document.getElementById('vincCodigo').textContent = vincCodigo;
+  document.getElementById('vincConfirmar').style.display = 'none';
+  document.getElementById('vincBuscarWrap').style.display = 'block';
+  const inp = document.getElementById('vincBuscar');
+  inp.value = '';
+  document.getElementById('vincOverlay').style.display = 'flex';
+  vincBuscar();
+  setTimeout(() => inp.focus(), 80);
+};
+
+window.cerrarVinculacion = function(){
+  document.getElementById('vincOverlay').style.display = 'none';
+};
+
+// Lista de candidatos: los productos SIN código van primero, porque son
+// los que tiene sentido asociar
+window.vincBuscar = function(){
+  const q = norm(document.getElementById('vincBuscar').value);
+  const palabras = q.split(' ').filter(Boolean);
+  const cont = document.getElementById('vincLista');
+
+  let cand = allProducts.filter(p => !palabras.length || matchQuery(p.normDesc, palabras));
+  cand.sort((a, b) => (a.cod ? 1 : 0) - (b.cod ? 1 : 0));
+  cand = cand.slice(0, 40);
+
+  if(!cand.length){
+    cont.innerHTML = '<div class="vinc-vacio">Ningún producto coincide. Probá con menos palabras.</div>';
+    return;
+  }
+  cont.innerHTML = cand.map(p => {
+    const i = allProducts.indexOf(p);
+    const ya = p.cod ? '<span class="vinc-ya">ya tiene ' + escaparHtml(p.cod) + '</span>' : '';
+    return '<button class="vinc-item" onclick="vincElegir(' + i + ')">' +
+             '<span class="vinc-nom">' + escaparHtml(p.desc) + '</span>' +
+             '<span class="vinc-meta"><span class="badge ' + badgeClass(p.proveedor) + '">' +
+               escaparHtml(p.proveedor) + '</span>' + ya + '</span>' +
+           '</button>';
+  }).join('');
+};
+
+window.vincElegir = function(idx){
+  const p = allProducts[idx];
+  if(!p) return;
+  vincElegido = p;
+  const repetido = Codigos.yaUsado(vincCodigo, p);
+  document.getElementById('vincBuscarWrap').style.display = 'none';
+  document.getElementById('vincConfirmar').style.display = 'block';
+  document.getElementById('vincResumen').innerHTML =
+    '<div class="vinc-conf-nom">' + escaparHtml(p.desc) + '</div>' +
+    '<div class="vinc-conf-prov"><span class="badge ' + badgeClass(p.proveedor) + '">' +
+      escaparHtml(p.proveedor) + '</span></div>' +
+    '<div class="vinc-conf-cod">' + escaparHtml(vincCodigo) + '</div>' +
+    (p.cod ? '<div class="vinc-aviso">Este producto ya tenía el código <b>' +
+             escaparHtml(p.cod) + '</b>. Se va a reemplazar.</div>' : '') +
+    (repetido ? '<div class="vinc-aviso">Ojo: este código ya está en <b>' +
+             escaparHtml(repetido.n) + '</b> (' + escaparHtml(repetido.p) + ').</div>' : '');
+  document.getElementById('vincMsg').textContent = '';
+};
+
+window.vincVolver = function(){
+  document.getElementById('vincConfirmar').style.display = 'none';
+  document.getElementById('vincBuscarWrap').style.display = 'block';
+  setTimeout(() => document.getElementById('vincBuscar').focus(), 60);
+};
+
+window.vincGuardar = async function(){
+  if(!vincElegido) return;
+  const msg = document.getElementById('vincMsg');
+  const btn = document.getElementById('vincBtnGuardar');
+  btn.disabled = true;
+  msg.textContent = 'Guardando...';
+  try{
+    await Codigos.guardar(vincElegido, vincCodigo);
+    cerrarVinculacion();
+    // Se busca el código recién asociado: tiene que aparecer el producto
+    const inp = document.getElementById('searchInput');
+    inp.value = vincCodigo;
+    applyFilters();
+    if(navigator.vibrate){ try{ navigator.vibrate(45); }catch(e){} }
+  }catch(e){
+    msg.textContent = 'No se pudo guardar: ' + (e && e.message ? e.message : 'error de conexión');
+  }finally{
+    btn.disabled = false;
+  }
+};
+
+Codigos.escuchar();
 </script>
 
 <script>
