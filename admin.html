@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="shortcut icon" href="icons/favicon.ico" type="image/x-icon">
-<title>dietética josué</title>
+<title>Dietética Josué</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -69,6 +69,7 @@ select:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px r
 .credito .cr-wa:hover{opacity:.7}
 .credito .cr-wa img{width:16px;height:16px;flex-shrink:0}
 .brand img{width:100%;max-width:230px;height:auto;display:block;margin:0 auto}
+
 </style>
 </head>
 <body>
@@ -116,6 +117,7 @@ select:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px r
       <div class="status-box" id="lastUpdateBox"></div>
     </div>
   </div>
+
 
   <!-- CONVERSOR -->
   <!-- Conversores ocultos: los proveedores se actualizan con los scrapers -->
@@ -176,7 +178,7 @@ select:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px r
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getDatabase, ref, set, get } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { getDatabase, ref, set, get, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
   from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
@@ -201,6 +203,7 @@ onAuthStateChanged(auth, user => {
     document.getElementById('loginWrap').style.display = 'none';
     document.getElementById('adminWrap').style.display = 'block';
     cargarUltimaActualizacion();
+    limpiarEstadisticasViejas();
   } else {
     document.getElementById('loginWrap').style.display = 'block';
     document.getElementById('adminWrap').style.display = 'none';
@@ -1187,6 +1190,45 @@ async function cargarUltimaActualizacion(){
       document.getElementById('lastUpdate').style.display = 'block';
     }
   } catch(e){}
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+//  BORRADO AUTOMÁTICO DE ESTADÍSTICAS VIEJAS
+//  Se guardan 6 meses. Corre al iniciar sesión, que es el momento en
+//  que hay alguien autenticado.
+//  No se lee nada antes de borrar: las claves de período son
+//  predecibles (2026-W40, 2026-09), así que se calculan las viejas y
+//  se mandan en null. Borrar algo que no existe no hace nada, y así
+//  la limpieza no descarga el historial para saber qué borrar.
+// ══════════════════════════════════════════════════════════════════
+function claveSemanaISO(d){
+  const j = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  j.setUTCDate(j.getUTCDate() + 4 - (j.getUTCDay() || 7));
+  const anio = j.getUTCFullYear();
+  const sem = Math.ceil((((j - Date.UTC(anio, 0, 1)) / 86400000) + 1) / 7);
+  return anio + '-W' + String(sem).padStart(2, '0');
+}
+
+async function limpiarEstadisticasViejas(){
+  const hoy = new Date();
+  const semanas = {}, meses = {};
+  // De 27 semanas atrás (poco más de 6 meses) hasta 2 años atrás
+  for(let i = 27; i <= 104; i++){
+    const d = new Date(hoy); d.setDate(d.getDate() - 7 * i);
+    semanas[claveSemanaISO(d)] = null;
+  }
+  for(let i = 7; i <= 30; i++){
+    const m = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    meses[m.getFullYear() + '-' + String(m.getMonth() + 1).padStart(2, '0')] = null;
+  }
+  try{
+    await update(ref(db, 'stats/semanas'), semanas);
+    await update(ref(db, 'stats/meses'), meses);
+  }catch(e){
+    // Si falla no importa: se vuelve a intentar en el próximo ingreso
+    console.warn('No se pudieron borrar las estadísticas viejas:', e);
+  }
 }
 </script>
 </body>
