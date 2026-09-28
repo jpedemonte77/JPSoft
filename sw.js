@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jpsoft-dietetica-v13';
+const CACHE_NAME = 'jpsoft-dietetica-v14';
 const ASSETS = [
   '/JPSoft/',
   '/JPSoft/index.html',
