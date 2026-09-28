@@ -433,6 +433,12 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
   .est-grid{grid-template-columns:1fr;gap:1.25rem}
   .est-rango{margin-left:0;width:100%}
 }
+/* Aviso de que los resultados son por aproximacion */
+.aviso-correccion{display:none;margin:0 20px 10px;padding:8px 12px;border-radius:8px;
+  background:rgba(176,124,26,0.06);border:1px solid rgba(176,124,26,0.18);
+  font-size:12.5px;color:#7a5510;line-height:1.5}
+.aviso-correccion b{font-weight:600;color:#5c3f0b}
+@media(max-width:900px){ .aviso-correccion{margin:0 16px 8px;font-size:12px;padding:7px 10px} }
 </style>
 </head>
 <body>
@@ -492,6 +498,8 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
       <div class="stat"><div class="stat-n" id="statUpdate"></div><div class="stat-l">última actualización</div></div>
     </div>
   </div>
+
+  <div class="aviso-correccion" id="avisoCorreccion"></div>
 
   <!-- Body -->
   <div class="body-area">
@@ -679,6 +687,170 @@ const app = initializeApp({ databaseURL: FIREBASE_URL });
 const db  = getDatabase(app);
 
 let allProducts=[], filtered=[], activeFilter='Todos', page=1, provOrder=[];
+let correccion = '';   // termino corregido de la ultima busqueda
+
+// ══════════════════════════════════════════════════════════════════
+//  BÚSQUEDA TOLERANTE A ERRORES DE TIPEO
+//  Sólo entra en acción cuando la búsqueda exacta no devuelve NADA.
+//  Mientras haya resultados exactos no se ejecuta una sola línea de
+//  esto, así que el camino de todos los días queda igual que antes.
+//
+//  Corrige dos cosas distintas:
+//   · errores de dedo (falta, sobra, se cambió o se dio vuelta una
+//     letra) con distancia de Damerau-Levenshtein acotada;
+//   · errores de ortografía del español (b/v, s/c/z, ll/y, h muda)
+//     comparando una clave fonética.
+//
+//  Lo que NUNCA corrige son los números: un código de barras con un
+//  dígito cambiado es OTRO producto, y mostrar el precio equivocado
+//  es el único error grave que este sistema puede cometer.
+// ══════════════════════════════════════════════════════════════════
+const Tolerante = (function(){
+  const MIN_PALABRA = 4;    // más corto que esto, una letra cambia el significado
+  const TOPE        = 300;  // tope de productos devueltos
+
+  let porToken = null;      // Map<palabra, índices en allProducts>
+  let porLargo = null;      // Map<largo, palabra[]>
+  let porSonido = null;     // Map<clave fonética, palabra[]>
+
+  // Cuántos errores se toleran según el largo de la palabra.
+  // En "sal" un error da "sol" o "mal"; en "creatina" dos siguen siendo creatina.
+  function tolerancia(n){ return n <= 3 ? 0 : n <= 6 ? 1 : 2; }
+
+  // Clave fonética del español rioplatense
+  function sonido(t){
+    return t
+      .replace(/qu/g, 'k')
+      .replace(/gu([ei])/g, 'g$1')
+      .replace(/[cz]([ei])/g, 's$1')
+      .replace(/c/g, 'k')
+      .replace(/z/g, 's')
+      .replace(/v/g, 'b')
+      .replace(/ll/g, 'y')
+      .replace(/h/g, '')
+      .replace(/x/g, 'ks')
+      .replace(/(.)\1+/g, '$1');     // letras repetidas
+  }
+
+  function agregar(mapa, clave, valor){
+    const l = mapa.get(clave);
+    if(l) l.push(valor); else mapa.set(clave, [valor]);
+  }
+
+  // El índice se arma la primera vez que hace falta, no al abrir la página
+  function construir(){
+    porToken = new Map(); porLargo = new Map(); porSonido = new Map();
+    for(let i = 0; i < allProducts.length; i++){
+      const desc = allProducts[i].normDesc || '';
+      const vistas = new Set();
+      for(const t of desc.split(' ')){
+        if(t.length < MIN_PALABRA || vistas.has(t) || /\d/.test(t)) continue;
+        vistas.add(t);
+        if(!porToken.has(t)){
+          porToken.set(t, [i]);
+          agregar(porLargo, t.length, t);
+          agregar(porSonido, sonido(t), t);
+        } else {
+          porToken.get(t).push(i);
+        }
+      }
+    }
+  }
+
+  // Damerau-Levenshtein con corte temprano: si ya se pasó de "max", abandona
+  function distancia(a, b, max){
+    const la = a.length, lb = b.length;
+    if(Math.abs(la - lb) > max) return max + 1;
+    let ant2 = null, ant = new Array(lb + 1), act = new Array(lb + 1);
+    for(let j = 0; j <= lb; j++) ant[j] = j;
+    for(let i = 1; i <= la; i++){
+      act[0] = i;
+      let mejor = i;
+      for(let j = 1; j <= lb; j++){
+        const costo = a.charCodeAt(i-1) === b.charCodeAt(j-1) ? 0 : 1;
+        let v = Math.min(ant[j] + 1, act[j-1] + 1, ant[j-1] + costo);
+        if(i > 1 && j > 1 &&
+           a.charCodeAt(i-1) === b.charCodeAt(j-2) &&
+           a.charCodeAt(i-2) === b.charCodeAt(j-1))
+          v = Math.min(v, ant2[j-2] + 1);          // dos letras dadas vuelta
+        act[j] = v;
+        if(v < mejor) mejor = v;
+      }
+      if(mejor > max) return max + 1;
+      ant2 = ant; ant = act; act = new Array(lb + 1);
+    }
+    return ant[lb];
+  }
+
+  // Palabra con dígitos: se exige tal cual, en cualquiera de los tres campos
+  function exacta(p){
+    const idx = new Set();
+    for(let i = 0; i < allProducts.length; i++){
+      const a = allProducts[i];
+      if((a.normDesc || '').includes(p) ||
+         (a.normCod  || '').includes(p) ||
+         (a.normId   || '').includes(p)) idx.add(i);
+    }
+    return idx;
+  }
+
+  function buscar(palabras, filtroProv){
+    if(!palabras.length) return null;
+    if(!porToken) construir();
+
+    const conjuntos = [], corregidas = [];
+    for(const p of palabras){
+      if(/\d/.test(p)){                      // números: nunca se corrigen
+        conjuntos.push(exacta(p));
+        corregidas.push(p);
+        continue;
+      }
+      const tol = tolerancia(p.length);
+      const cand = new Map();                // palabra del catálogo → calidad (0 = mejor)
+
+      for(const t of porToken.keys()) if(t.includes(p)) cand.set(t, 0);
+      for(const t of (porSonido.get(sonido(p)) || [])) if(!cand.has(t)) cand.set(t, 3);
+      if(tol){
+        for(let L = Math.max(1, p.length - tol); L <= p.length + tol; L++){
+          for(const t of (porLargo.get(L) || [])){
+            if(cand.get(t) === 0) continue;
+            const d = distancia(p, t, tol);
+            if(d <= tol && (!cand.has(t) || cand.get(t) > d)) cand.set(t, d);
+          }
+        }
+      }
+      if(!cand.size) return null;            // esta palabra no tiene arreglo posible
+
+      let mejor = null, mejorCal = 99;
+      const idx = new Set();
+      for(const [t, cal] of cand){
+        if(cal < mejorCal){ mejorCal = cal; mejor = t; }
+        for(const i of porToken.get(t)) idx.add(i);
+      }
+      conjuntos.push(idx);
+      // Si la palabra ya estaba bien escrita, se deja como la tipearon
+      corregidas.push(mejorCal === 0 ? p : mejor);
+    }
+
+    // Todas las palabras tienen que estar, igual que en la búsqueda normal
+    let orden = conjuntos.map((c, i) => i).sort((a, b) => conjuntos[a].size - conjuntos[b].size);
+    let res = [...conjuntos[orden[0]]];
+    for(let k = 1; k < orden.length && res.length; k++){
+      const c = conjuntos[orden[k]];
+      res = res.filter(i => c.has(i));
+    }
+
+    let productos = res.map(i => allProducts[i]);
+    if(filtroProv && filtroProv !== 'Todos')
+      productos = productos.filter(p => p.proveedor === filtroProv);
+    if(!productos.length) return null;
+
+    return { productos: productos.slice(0, TOPE),
+             corregido: corregidas.join(' ') };
+  }
+
+  return { buscar, sonido, distancia, tolerancia };
+})();
 
 // ══════════════════════════════════════════════════════════════════
 //  ESTADÍSTICAS DE USO
@@ -818,8 +990,11 @@ const Stats = (function(){
         return;        // ID corto que no existe: es un error de tipeo, no un faltante
       }
     } else {                                  // nombre o parte del nombre
-      if(estado.n){ sumar('busq/' + t);  sumar('tot/busq'); }
-      else        { sumar('nores/' + t); sumar('tot/nores'); }
+      // Si la encontro corrigiendo un error de tipeo, se anota la palabra
+      // corregida: "creatna" no es un faltante, es creatina mal escrita.
+      const llave = estado.corregido ? (clave(norm(estado.corregido)) || t) : t;
+      if(estado.n){ sumar('busq/' + llave);  sumar('tot/busq'); }
+      else        { sumar('nores/' + t);     sumar('tot/nores'); }
     }
     sumar('dias/' + periodos().dia);
   }
@@ -876,7 +1051,9 @@ const Stats = (function(){
 // Puentes para los handlers del buscador (el modulo no es global).
 // Se pasa una funcion porque el estado se consulta recien cuando toca anotar.
 function estadoBusqueda(){
-  return { n: filtered.length, nombre: filtered.length ? filtered[0].desc : '' };
+  return { n: filtered.length,
+           nombre: filtered.length ? filtered[0].desc : '',
+           corregido: correccion };
 }
 window.trackBusqueda = function(v){ Stats.busqueda(v, estadoBusqueda); };
 window.trackEscaneo  = function(v){ Stats.escaneo(v, estadoBusqueda); };
@@ -1059,16 +1236,38 @@ function buildFilters(){
   });
 }
 
+function escaparHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                  .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function mostrarCorreccion(raw){
+  const el = document.getElementById('avisoCorreccion');
+  if(!el) return;
+  if(!correccion){ el.style.display = 'none'; return; }
+  el.innerHTML = 'Sin resultados para <b>' + escaparHtml(raw.trim()) +
+                 '</b> &middot; mostrando parecidos a <b>' + escaparHtml(correccion) + '</b>';
+  el.style.display = 'block';
+}
+
 window.applyFilters = function(){
   const raw=document.getElementById('searchInput').value;
   const words=norm(raw).split(' ').filter(Boolean);
+  correccion='';
   filtered=allProducts.filter(p=>{
     if(activeFilter!=='Todos' && p.proveedor!==activeFilter) return false;
     if(!words.length) return true;
     return matchQuery(p.normDesc,words)||matchQuery(p.normCod,words)||matchQuery(p.normId||'',words);
   });
+  // Recien cuando la busqueda exacta no devuelve nada se prueba tolerando
+  // errores de tipeo. Mientras haya resultados, esto no se ejecuta.
+  if(!filtered.length && words.length){
+    const r = Tolerante.buscar(words, activeFilter);
+    if(r){ filtered = r.productos; correccion = r.corregido; }
+  }
   page=1;
   document.getElementById('statTotal').textContent=filtered.length.toLocaleString();
+  mostrarCorreccion(raw);
   renderTable();
 };
 
@@ -1077,7 +1276,9 @@ function renderTable(){
   const cardList=document.getElementById('cardList');
   const empty=document.getElementById('emptyMsg');
   const raw=document.getElementById('searchInput').value;
-  const words=norm(raw).split(' ').filter(Boolean);
+  // Si hubo correccion, se resalta la palabra corregida: es la que aparece
+  // en el nombre del producto, la tipeada no esta en ningun lado
+  const words=norm(correccion || raw).split(' ').filter(Boolean);
   const totalPages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));
   if(page>totalPages) page=totalPages;
   const slice=filtered.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
