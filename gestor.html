@@ -8,10 +8,10 @@
 <meta name="theme-color" content="#ffffff">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="dietética josué">
+<meta name="apple-mobile-web-app-title" content="Dietética Josué">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<title>dietética josué</title>
+<title>Dietética Josué</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',system-ui,sans-serif;background:#f7f7f8;color:#111;min-height:100vh;display:flex;flex-direction:column;font-size:15px}
@@ -308,9 +308,9 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
 .tb-credito .cr-wa{font-size:11.5px}
 .tb-credito .cr-wa img{width:14px;height:14px}
 .pie-movil{display:none}
-@media(max-width:620px){
-  /* Con los botones en modo icono la leyenda entra hasta ~560px;
-     por debajo de eso se pasa al pie de la pagina */
+@media(max-width:1539px){
+  /* Con 5 botones con texto, la leyenda centrada en la barra se pisa con
+     ellos por debajo de ~1540px. Ahi se muda al pie de la pagina. */
   .tb-credito{display:none}
   .pie-movil{display:block;width:100%;max-width:340px;margin:1.4rem auto 1.8rem;
     padding-top:1.5rem;border-top:1px solid rgba(0,0,0,0.07)}
@@ -335,8 +335,8 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
 .btn-home.btn-nav:hover{background:#f0f0f2;color:#111}
 .tb-left{gap:14px}
 .toggle-group{gap:7px}
-/* Los 4 botones de la barra: mismo tamanio */
-.btn-toggle,.btn-refresh,.btn-home.btn-nav{width:106px!important;min-width:106px!important;
+/* Los 5 botones de la barra: mismo tamanio */
+.btn-toggle,.btn-refresh,.btn-home.btn-nav{width:116px!important;min-width:116px!important;
   height:28px!important;padding:0 8px!important;font-size:12.5px!important;
   display:inline-flex;align-items:center;justify-content:center;gap:6px;box-sizing:border-box}
 .btn-toggle svg,.btn-refresh svg,.btn-home.btn-nav svg{width:14px;height:14px;flex-shrink:0}
@@ -351,13 +351,15 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
 
 /* === Movil: solo iconos (Inicio, Actualizar, Ganancia). Va al final para
    que tenga prioridad sobre el tamanio uniforme de PC === */
-/* Pantalla angosta: los botones pasan a ser solo iconos */
-@media(max-width:1200px){
-  #btnRefreshPC,#toggleGan,#toggleCart,.btn-home.btn-nav{display:inline-flex!important;
+/* Pantalla angosta: los botones pasan a ser solo iconos.
+   Sin la leyenda en la barra, los 5 botones con texto entran hasta ~800px;
+   el corte en 940 deja margen. */
+@media(max-width:940px){
+  #btnRefreshPC,#toggleGan,#toggleEst,#toggleCart,.btn-home.btn-nav{display:inline-flex!important;
     width:30px!important;min-width:30px!important;height:30px!important;
     padding:0!important;border-radius:7px!important;justify-content:center;gap:0;
     font-size:0!important;overflow:hidden}
-  #btnRefreshPC svg,#toggleGan svg,#toggleCart svg,.btn-home.btn-nav svg{width:15px;height:15px}
+  #btnRefreshPC svg,#toggleGan svg,#toggleEst svg,#toggleCart svg,.btn-home.btn-nav svg{width:15px;height:15px}
   #cartBadge{display:none!important}
 }
 /* Movil: el Carrito no se muestra */
@@ -379,9 +381,58 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
 .tb-credito .cr-dev{margin-bottom:0!important}
 
 /* Visibilidad de la leyenda: va al final para que ninguna regla la pise.
-   Arriba de 620px vive en la barra; por debajo, al pie de la pagina. */
-@media(min-width:621px){ .tb-credito{display:flex!important} }
-@media(max-width:620px){ .tb-credito{display:none!important} }
+   Desde 1540px vive en la barra; por debajo, al pie de la pagina. */
+@media(min-width:1540px){ .tb-credito{display:flex!important} }
+@media(max-width:1539px){ .tb-credito{display:none!important} }
+
+/* ── Panel de Estadísticas ── */
+.est-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:210;padding:16px;overflow-y:auto}
+.est-modal{background:#fff;border-radius:14px;width:760px;max-width:100%;max-height:calc(100vh - 32px);display:flex;flex-direction:column;border:1px solid rgba(0,0,0,0.08);box-shadow:0 8px 32px rgba(0,0,0,0.18);margin:auto}
+.est-head{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid rgba(0,0,0,0.06);flex-shrink:0}
+.est-title{font-size:14px;font-weight:600;color:#111;flex:1;min-width:0}
+.est-close{width:22px;height:22px;border-radius:50%;border:none;background:rgba(0,0,0,0.07);color:#555;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;flex-shrink:0;transition:background .15s}
+.est-close:hover{background:#111;color:#fff}
+.est-body{padding:16px 20px 20px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.est-sel{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.est-tab{padding:6px 13px;border-radius:7px;border:1px solid rgba(0,0,0,0.12);background:#fff;color:#555;font-size:12.5px;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
+.est-tab:hover{background:#f4f4f5;color:#111}
+.est-tab.on{background:#111;border-color:#111;color:#fff}
+.est-tab.on:hover{background:#111;color:#fff}
+.est-rango{font-size:11px;color:#bbb;margin-left:auto;white-space:nowrap}
+.est-nums{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1.5rem}
+.est-n{background:#f7f7f8;border:1px solid rgba(0,0,0,0.06);border-radius:9px;padding:9px 12px;min-width:0}
+.est-n b{display:block;font-size:18px;font-weight:500;color:#111;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.est-n span{font-size:10px;color:#999;display:block;margin-top:3px;line-height:1.3}
+.est-n.alerta b{color:#c0391a}
+.est-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem 1.75rem}
+.est-box{min-width:0}
+.est-h{font-size:12.5px;font-weight:500;color:#111;margin-bottom:2px}
+.est-sh{font-size:11px;color:#aaa;margin-bottom:10px;line-height:1.45}
+.est-row{padding:4px 0 6px;min-width:0}
+.est-row .er-top{display:flex;align-items:baseline;gap:8px;min-width:0}
+.est-row .er-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#111;font-size:12.5px}
+.est-row .er-n{font-family:'DM Mono',ui-monospace,monospace;font-size:11px;color:#888;flex-shrink:0}
+.est-row .er-sub{font-size:10px;color:#bbb;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.est-row .er-cod{font-family:'DM Mono',ui-monospace,monospace;font-size:11.5px;color:#111}
+.est-bar{height:3px;background:rgba(0,0,0,0.055);border-radius:2px;margin-top:6px;overflow:hidden}
+.est-bar i{display:block;height:3px;background:#111;border-radius:2px}
+.est-box.alerta .est-bar i{background:#c0391a}
+.est-box.alerta .er-n{color:#c0391a}
+.est-empty{font-size:11.5px;color:#ccc;padding:12px 0;line-height:1.6}
+.est-dias{display:flex;gap:5px;align-items:flex-end;height:62px;margin-top:8px}
+.est-dia{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;min-width:0}
+.est-dia i{display:block;width:100%;max-width:30px;background:#111;border-radius:3px 3px 0 0;min-height:2px}
+.est-dia u{font-size:9.5px;color:#999;text-decoration:none;font-family:'DM Mono',ui-monospace,monospace}
+.est-dia span{font-size:10px;color:#999}
+.est-pie{font-size:11px;color:#bbb;margin-top:1.3rem;padding-top:.9rem;border-top:1px solid rgba(0,0,0,0.06)}
+@media(max-width:620px){
+  .est-overlay{padding:8px}
+  .est-modal{max-height:calc(100vh - 16px)}
+  .est-body{padding:14px 16px 18px}
+  .est-nums{grid-template-columns:1fr 1fr}
+  .est-grid{grid-template-columns:1fr;gap:1.25rem}
+  .est-rango{margin-left:0;width:100%}
+}
 </style>
 </head>
 <body>
@@ -401,6 +452,9 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
       <button class="btn-toggle" id="toggleGan" onclick="togglePanel('gan')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg> Ganancia
       </button>
+      <button class="btn-toggle" id="toggleEst" onclick="abrirEstadisticas()" title="Estadísticas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="20" x2="5" y2="13"/><line x1="12" y1="20" x2="12" y2="8"/><line x1="19" y1="20" x2="19" y2="4"/></svg> Estadísticas
+      </button>
       <button class="btn-toggle" id="toggleCart" onclick="togglePanel('cart')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.4 10.4a1.5 1.5 0 0 0 1.5 1.1h7.6a1.5 1.5 0 0 0 1.5-1.1L20 7H6"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="16.5" cy="19.5" r="1.3"/></svg> Carrito
         <span id="cartBadge" style="display:none;background:rgba(255,255,255,.25);border-radius:20px;font-size:9px;padding:1px 5px;margin-left:2px"></span>
@@ -419,7 +473,7 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
       <div class="search-row">
         <div class="search-wrap" id="searchWrap">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" id="searchInput" placeholder="" oninput="applyFilters()">
+          <input type="text" id="searchInput" placeholder="" oninput="applyFilters();trackBusqueda(this.value)">
         </div>
         <button class="btn-refresh btn-refresh-mobile" id="btnRefreshMobile" onclick="actualizarGestor(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg> Actualizar</button>
 
@@ -521,6 +575,80 @@ mark{background:#fef9c3;color:#854d0e;border-radius:2px;padding:0 1px}
   </div>
 </div>
 
+
+<!-- Panel de Estadísticas -->
+<div class="est-overlay" id="estOverlay" style="display:none" onclick="if(event.target===this)cerrarEstadisticas()">
+  <div class="est-modal">
+    <div class="est-head">
+      <div class="est-title">Estadísticas de uso</div>
+      <button class="est-close" onclick="cerrarEstadisticas()" title="Cerrar">✕</button>
+    </div>
+    <div class="est-body">
+
+      <div class="est-sel">
+        <button class="est-tab on" id="etSem0" onclick="verEstadisticas('sem',0)">Esta semana</button>
+        <button class="est-tab"    id="etSem1" onclick="verEstadisticas('sem',1)">Semana pasada</button>
+        <button class="est-tab"    id="etMes0" onclick="verEstadisticas('mes',0)">Este mes</button>
+        <button class="est-tab"    id="etMes1" onclick="verEstadisticas('mes',1)">Mes pasado</button>
+        <span class="est-rango" id="estRango"></span>
+      </div>
+
+      <div class="est-nums">
+        <div class="est-n"><b id="enBusq">—</b><span>consultas</span></div>
+        <div class="est-n alerta"><b id="enFalta">—</b><span>sin resultado</span></div>
+        <div class="est-n"><b id="enVentas">—</b><span>ventas cobradas</span></div>
+        <div class="est-n"><b id="enMonto">—</b><span>facturado</span></div>
+      </div>
+
+      <div class="est-grid">
+        <div class="est-box">
+          <div class="est-h">Buscado por nombre</div>
+          <div class="est-sh">Lo que escriben en el buscador y sí encuentran</div>
+          <div id="estBusq"></div>
+        </div>
+
+        <div class="est-box alerta">
+          <div class="est-h">Buscado por nombre y no encontrado</div>
+          <div class="est-sh">Pedidos sin respuesta: candidatos a incorporar</div>
+          <div id="estNores"></div>
+        </div>
+
+        <div class="est-box">
+          <div class="est-h">Escaneado y encontrado</div>
+          <div class="est-sh">Código de barras y a qué producto corresponde</div>
+          <div id="estCod"></div>
+        </div>
+
+        <div class="est-box alerta">
+          <div class="est-h">Escaneado y no encontrado</div>
+          <div class="est-sh">Códigos que no están en ninguna lista: cargalos y desaparecen de acá</div>
+          <div id="estCodx"></div>
+        </div>
+
+        <div class="est-box">
+          <div class="est-h">Proveedores más consultados</div>
+          <div class="est-sh">Veces que se filtró por cada proveedor</div>
+          <div id="estProv"></div>
+        </div>
+
+        <div class="est-box">
+          <div class="est-h">Más vendidos</div>
+          <div class="est-sh">Según el monto facturado de cada producto</div>
+          <div id="estVend"></div>
+        </div>
+
+        <div class="est-box" style="grid-column:1/-1">
+          <div class="est-h">Actividad por día</div>
+          <div class="est-sh">Consultas hechas en cada día de la semana</div>
+          <div class="est-dias" id="estDias"></div>
+        </div>
+      </div>
+
+      <div class="est-pie" id="estPie"></div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal -->
 <div class="modal-overlay" id="modalOverlay" style="display:none">
   <div class="modal">
@@ -544,13 +672,215 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebas
 // publicás precios nuevos desde el admin, Firebase avisa
 // automáticamente y la página se actualiza sola.
 // ════════════════════════════════════════════════════════
-import { getDatabase, ref, onValue, set, get } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { getDatabase, ref, onValue, set, get, update, increment } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
 const FIREBASE_URL = 'https://jpsoft---gestor-default-rtdb.firebaseio.com';
 const app = initializeApp({ databaseURL: FIREBASE_URL });
 const db  = getDatabase(app);
 
 let allProducts=[], filtered=[], activeFilter='Todos', page=1, provOrder=[];
+
+// ══════════════════════════════════════════════════════════════════
+//  ESTADÍSTICAS DE USO
+//  Acumula contadores en memoria y los manda a Firebase cada 20 s
+//  (o al cerrar / minimizar la pestaña). De cada dato se guardan dos
+//  copias: una en la semana y otra en el mes, usando increment() de
+//  Firebase, así que nunca hace falta leer antes de escribir y varios
+//  dispositivos pueden sumar al mismo tiempo sin pisarse.
+//
+//  Ruta:  stats/semanas/2026-W40/...   y   stats/meses/2026-09/...
+//  Los períodos viejos los borra admin.html al iniciar sesión (6 meses).
+//  Va FUERA del nodo 'gestor' a proposito: si colgara de ahi, el listener
+//  en tiempo real de los precios se dispararia con cada busqueda y todos
+//  los dispositivos redibujarian la tabla sin motivo.
+// ══════════════════════════════════════════════════════════════════
+const Stats = (function(){
+  const PLAZO_FLUSH  = 20000;   // cada cuánto se manda lo acumulado
+  const ESPERA_BUSQ  = 1300;    // espera a que la persona termine de tipear
+  const MIN_LARGO    = 3;       // no registra búsquedas de 1 o 2 letras
+  const MAX_LARGO    = 45;
+  const MIN_CODIGO   = 8;       // un EAN real tiene 8 o 13 dígitos: por debajo
+                                // de eso es un ID tipeado a mano, no un faltante
+  const MAX_FALLOS   = 4;       // después de esto deja de intentar
+
+  let buf = {};        // { 'ruta/relativa': cantidad a sumar }
+  let txt = {};        // { 'ruta/relativa': texto a guardar tal cual }
+  let timer = null, tBusq = null, fallos = 0, apagado = false;
+  let ultimaBusq = '';
+  const nombresPuestos = new Set();   // el nombre de cada código/producto se
+                                      // manda una sola vez por sesión: no cambia
+
+  // ── Semana ISO, mes y día de la semana ──
+  function periodos(){
+    const d = new Date();
+    const j = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const dow = j.getUTCDay() || 7;                 // lunes = 1 ... domingo = 7
+    j.setUTCDate(j.getUTCDate() + 4 - dow);         // jueves de esa semana
+    const anio = j.getUTCFullYear();
+    const sem = Math.ceil((((j - Date.UTC(anio, 0, 1)) / 86400000) + 1) / 7);
+    return {
+      semana: anio + '-W' + String(sem).padStart(2, '0'),
+      mes:    d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'),
+      dia:    String(d.getDay())                    // 0 = domingo ... 6 = sábado
+    };
+  }
+
+  // Firebase no acepta  .  #  $  [  ]  /  en las claves
+  function clave(s){
+    return String(s || '')
+      .replace(/[.#$\[\]\/]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 60);
+  }
+
+  function programar(){
+    if(apagado || timer) return;
+    timer = setTimeout(enviar, PLAZO_FLUSH);
+  }
+
+  function sumar(rama, cant){
+    if(apagado || !rama) return;
+    buf[rama] = (buf[rama] || 0) + (cant || 1);
+    programar();
+  }
+
+  function fijar(rama, valor){
+    if(apagado || !rama) return;
+    txt[rama] = valor;
+    programar();
+  }
+
+  // ── Envío ──
+  function enviar(){
+    if(timer){ clearTimeout(timer); timer = null; }
+    const ramasN = Object.keys(buf), ramasT = Object.keys(txt);
+    if(!ramasN.length && !ramasT.length) return;
+
+    const pendN = buf, pendT = txt;
+    buf = {}; txt = {};
+
+    const p = periodos(), carga = {}, ahora = Date.now();
+    ramasN.forEach(r => {
+      carga['semanas/' + p.semana + '/' + r] = increment(pendN[r]);
+      carga['meses/'   + p.mes    + '/' + r] = increment(pendN[r]);
+    });
+    ramasT.forEach(r => {
+      carga['semanas/' + p.semana + '/' + r] = pendT[r];
+      carga['meses/'   + p.mes    + '/' + r] = pendT[r];
+    });
+    carga['semanas/' + p.semana + '/act'] = ahora;
+    carga['meses/'   + p.mes    + '/act'] = ahora;
+
+    update(ref(db, 'stats'), carga)
+      .then(() => { fallos = 0; })
+      .catch(() => {
+        // Sin internet o reglas sin permiso: devuelve lo acumulado y reintenta
+        fallos++;
+        if(fallos >= MAX_FALLOS){ apagado = true; buf = {}; txt = {}; return; }
+        Object.keys(pendN).forEach(r => { buf[r] = (buf[r] || 0) + pendN[r]; });
+        Object.keys(pendT).forEach(r => { if(!(r in txt)) txt[r] = pendT[r]; });
+        programar();
+      });
+  }
+
+  // ══════════════ Lo que se registra ══════════════
+
+  // Núcleo del registro. "estado" trae cuántos resultados hubo y el nombre
+  // del primero. Las consultas van a cuatro listas separadas, porque cada una
+  // responde a una pregunta distinta:
+  //   busq  → escribieron un nombre y lo encontraron  (qué piden)
+  //   nores → escribieron un nombre y no está         (qué incorporar)
+  //   cod   → escanearon y lo encontraron             (qué pasa por el mostrador)
+  //   codx  → escanearon y no está                    (qué cargar en las listas)
+  // En "cod" se guarda el código y el nombre del producto, así el panel puede
+  // mostrar los dos juntos sin tener que adivinar a qué corresponde el número.
+  function registrar(texto, estado, forzar){
+    const t = clave(norm(texto));
+    // Buscador vacío: se corta la racha, así la próxima consulta igual sí cuenta
+    if(!t){ ultimaBusq = ''; return; }
+    if(t.length < MIN_LARGO || t.length > MAX_LARGO) return;
+    if(!forzar && t === ultimaBusq) return;   // no repite si no cambió
+    ultimaBusq = t;
+
+    if(/^\d+$/.test(t)){                      // código de barras o ID
+      if(estado.n){
+        sumar('cod/' + t + '/n');
+        sumar('tot/cod');
+        if(!nombresPuestos.has('c' + t)){
+          nombresPuestos.add('c' + t);
+          fijar('cod/' + t + '/d', String(estado.nombre || '').slice(0, 45));
+        }
+      } else if(t.length >= MIN_CODIGO){
+        sumar('codx/' + t);
+        sumar('tot/codx');
+      } else {
+        return;        // ID corto que no existe: es un error de tipeo, no un faltante
+      }
+    } else {                                  // nombre o parte del nombre
+      if(estado.n){ sumar('busq/' + t);  sumar('tot/busq'); }
+      else        { sumar('nores/' + t); sumar('tot/nores'); }
+    }
+    sumar('dias/' + periodos().dia);
+  }
+
+  // Tecleo: se llama en cada tecla, pero sólo cuenta cuando la persona deja
+  // de tipear, así "c", "cr", "cre"... no infla los números.
+  function busqueda(texto, estado){
+    if(apagado) return;
+    if(tBusq) clearTimeout(tBusq);
+    tBusq = setTimeout(() => { tBusq = null; registrar(texto, estado(), false); }, ESPERA_BUSQ);
+  }
+
+  // Lector de código de barras: el Enter avisa que la consulta ya está
+  // completa, así que se anota en el momento y sin esperar. Va aparte del
+  // tecleo porque en la caja se escanean varios productos seguidos y el
+  // retardo dejaría registrado sólo el último.
+  function escaneo(texto, estado){
+    if(apagado) return;
+    if(tBusq){ clearTimeout(tBusq); tBusq = null; }
+    registrar(texto, estado(), true);
+  }
+
+  function proveedor(nombre){
+    if(apagado || !nombre || nombre === 'Todos') return;
+    sumar('prov/' + clave(nombre));
+    sumar('tot/prov');
+  }
+
+  function venta(items, total){
+    if(apagado || !items.length) return;
+    sumar('ventas/n');
+    sumar('ventas/monto', Math.round(total));
+    sumar('ventas/dias/' + periodos().dia);
+    items.forEach(it => {
+      const k = clave(it.prov) + ' - ' + clave(it.desc);
+      sumar('ventas/items/' + k + '/n', it.cant);
+      sumar('ventas/items/' + k + '/m', Math.round(it.monto));
+      if(!nombresPuestos.has('v' + k)){
+        nombresPuestos.add('v' + k);
+        fijar('ventas/items/' + k + '/d', it.desc.slice(0, 60));
+        fijar('ventas/items/' + k + '/p', it.prov);
+      }
+    });
+    enviar();   // una venta se manda enseguida
+  }
+
+  // Manda lo pendiente al minimizar o cerrar (en móvil es lo habitual)
+  document.addEventListener('visibilitychange', () => { if(document.hidden) enviar(); });
+  window.addEventListener('pagehide', enviar);
+
+  return { busqueda, escaneo, proveedor, venta, enviar };
+})();
+
+// Puentes para los handlers del buscador (el modulo no es global).
+// Se pasa una funcion porque el estado se consulta recien cuando toca anotar.
+function estadoBusqueda(){
+  return { n: filtered.length, nombre: filtered.length ? filtered[0].desc : '' };
+}
+window.trackBusqueda = function(v){ Stats.busqueda(v, estadoBusqueda); };
+window.trackEscaneo  = function(v){ Stats.escaneo(v, estadoBusqueda); };
+
 const PAGE_SIZE=50, gananciaMap={}, useSugeridoMap={}, provColorMap={};
 const BADGE_COLORS=['b0','b1','b2','b3','b4','b5','b6'];
 
@@ -724,7 +1054,7 @@ function buildFilters(){
     const btn=document.createElement('button');
     btn.className='pill'+(name===activeFilter?' active':'');
     btn.textContent=name;
-    btn.onclick=()=>{activeFilter=name;document.querySelectorAll('.pill').forEach(b=>b.classList.remove('active'));btn.classList.add('active');page=1;applyFilters();document.getElementById('searchInput').focus();};
+    btn.onclick=()=>{activeFilter=name;document.querySelectorAll('.pill').forEach(b=>b.classList.remove('active'));btn.classList.add('active');page=1;applyFilters();Stats.proveedor(name);document.getElementById('searchInput').focus();};
     row.appendChild(btn);
   });
 }
@@ -867,8 +1197,14 @@ document.addEventListener('keydown',e=>{
   const input=document.getElementById('searchInput');
   if(!input) return;
   if(document.activeElement===input){
-    if(e.key==='Enter'){const val=input.value.trim();if(/^\d+$/.test(val)){e.preventDefault();applyFilters();}}
+    if(e.key==='Enter'){const val=input.value.trim();if(/^\d+$/.test(val)){e.preventDefault();applyFilters();trackEscaneo(val);}}
     if(e.key==='Escape'){input.value='';applyFilters();input.blur();}
+    return;
+  }
+  // Con el panel de estadísticas abierto, el tipeo no va al buscador de atrás
+  const estAbierto=document.getElementById('estOverlay');
+  if(estAbierto&&estAbierto.style.display!=='none'){
+    if(e.key==='Escape') cerrarEstadisticas();
     return;
   }
   // Búsqueda rápida: si no hay ningún input activo y se presiona una tecla imprimible
@@ -892,6 +1228,7 @@ document.addEventListener('keydown',e=>{
       input.value=scanBuffer;
       setScanState('read');
       applyFilters();
+      trackEscaneo(input.value);
       input.focus();
     }
     scanBuffer=''; return;
@@ -1075,6 +1412,15 @@ function renderCart(){
 }
 window.confirmarNuevaVenta=function(){
   if(!Object.keys(cart).length) return;
+  // Registro de la venta para el panel de estadisticas
+  try{
+    Stats.venta(Object.keys(cart).map(k=>{
+      const{product:p,qty,gramos}=cart[k];
+      return {prov:p.proveedor, desc:p.desc,
+              cant:(p.unit==='kg'||p.unit==='100g')?1:qty,
+              monto:calcPrecio(p,qty,gramos)};
+    }), Object.keys(cart).reduce((s,k)=>s+calcPrecio(cart[k].product,cart[k].qty,cart[k].gramos),0));
+  }catch(e){}
   const now=new Date();
   const fecha=now.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
   const hora=now.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
@@ -1119,7 +1465,7 @@ window.imprimirTicket = function(){
     return `<div class="row"><span class="name">${det}</span><span class="price">${fmtDec(sub)}</span></div>`;
   }).join('');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-    <title>Ticket — dietética josué</title>
+    <title>Ticket — Dietética Josué</title>
     <style>
       *{box-sizing:border-box;margin:0;padding:0}
       body{font-family:'Courier New',monospace;font-size:13px;padding:20px;color:#111;max-width:300px}
@@ -1233,6 +1579,181 @@ window.toggleCardDesc = function(el){
 
 
 cargarDesdeFirebase();
+
+// ══════════════════════════════════════════════════════════════════
+//  PANEL DE ESTADÍSTICAS
+//  Lee lo que el tracker viene acumulando en stats/semanas y stats/meses.
+//  Se baja un solo período por vez, así abrir el panel no arrastra el
+//  historial entero.
+// ══════════════════════════════════════════════════════════════════
+const EST_DIAS  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const EST_MESES = ['enero','febrero','marzo','abril','mayo','junio',
+                   'julio','agosto','septiembre','octubre','noviembre','diciembre'];
+let estPeriodo = { tipo:'sem', atras:0 }, estCache = {};
+
+function estClaveSemana(d){
+  const j = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dow = j.getUTCDay() || 7;
+  j.setUTCDate(j.getUTCDate() + 4 - dow);
+  const anio = j.getUTCFullYear();
+  const sem = Math.ceil((((j - Date.UTC(anio, 0, 1)) / 86400000) + 1) / 7);
+  return anio + '-W' + String(sem).padStart(2, '0');
+}
+
+function estLunes(d){
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  x.setDate(x.getDate() - ((x.getDay() || 7) - 1));
+  return x;
+}
+
+function estRuta(p){
+  const hoy = new Date();
+  if(p.tipo === 'sem'){
+    const l = estLunes(hoy);
+    l.setDate(l.getDate() - 7 * p.atras);
+    const dom = new Date(l); dom.setDate(dom.getDate() + 6);
+    return { ruta:'stats/semanas/' + estClaveSemana(l),
+             rango: l.getDate() + ' ' + EST_MESES[l.getMonth()].slice(0,3) + ' – ' +
+                    dom.getDate() + ' ' + EST_MESES[dom.getMonth()].slice(0,3) };
+  }
+  const m = new Date(hoy.getFullYear(), hoy.getMonth() - p.atras, 1);
+  return { ruta:'stats/meses/' + m.getFullYear() + '-' + String(m.getMonth() + 1).padStart(2,'0'),
+           rango: EST_MESES[m.getMonth()] + ' ' + m.getFullYear() };
+}
+
+function estMonto(n){
+  if(!n) return '$0';
+  if(n >= 1000000) return '$' + (n/1000000).toLocaleString('es-AR',{maximumFractionDigits:1}) + 'M';
+  return '$' + Math.round(n).toLocaleString('es-AR');
+}
+
+function estEsc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function estTop(obj, n){
+  return Object.entries(obj || {})
+    .filter(([, v]) => typeof v === 'number' && v > 0)
+    .sort((a, b) => b[1] - a[1]).slice(0, n);
+}
+
+// Para un código escaneado, el nombre sale de la lista cargada en el gestor
+// (siempre actualizado). Si el producto ya no está, se usa el que quedó guardado.
+function estNombreDeCodigo(cod, guardado){
+  const p = allProducts.find(x => String(x.cod) === cod || String(x.id) === cod);
+  return p ? p.desc : (guardado || '');
+}
+
+function estPintar(id, filas, vacio){
+  const c = document.getElementById(id);
+  if(!c) return;
+  if(!filas.length){ c.innerHTML = '<div class="est-empty">' + vacio + '</div>'; return; }
+  const max = filas[0].valor || 1;
+  c.innerHTML = filas.map(f =>
+    '<div class="est-row"><div class="er-top">' +
+      '<span class="er-t' + (f.mono ? ' er-cod' : '') + '" title="' + estEsc(f.titulo) + '">' + estEsc(f.titulo) + '</span>' +
+      '<span class="er-n">' + f.etiqueta + '</span></div>' +
+      (f.sub ? '<div class="er-sub" title="' + estEsc(f.sub) + '">' + estEsc(f.sub) + '</div>' : '') +
+      '<div class="est-bar"><i style="width:' + Math.max(2, Math.round(f.valor / max * 100)) + '%"></i></div>' +
+    '</div>').join('');
+}
+
+function estPintarDias(dias){
+  const c = document.getElementById('estDias');
+  const orden = [1,2,3,4,5,6,0];
+  const vals = orden.map(i => (dias && dias[i]) || 0);
+  const max = Math.max(...vals, 1);
+  c.innerHTML = orden.map((i, k) => {
+    const v = vals[k], h = Math.max(2, Math.round(v / max * 42));
+    return '<div class="est-dia"><u>' + (v || '') + '</u><i style="height:' + h + 'px' +
+           (v ? '' : ';background:rgba(0,0,0,0.1)') + '"></i><span>' + EST_DIAS[i] + '</span></div>';
+  }).join('');
+}
+
+async function verEstadisticas(tipo, atras){
+  estPeriodo = { tipo, atras };
+  ['etSem0','etSem1','etMes0','etMes1'].forEach(id => {
+    const b = document.getElementById(id); if(b) b.classList.remove('on');
+  });
+  const tab = document.getElementById('et' + (tipo === 'sem' ? 'Sem' : 'Mes') + atras);
+  if(tab) tab.classList.add('on');
+
+  const { ruta, rango } = estRuta(estPeriodo);
+  document.getElementById('estRango').textContent = rango;
+  document.getElementById('estPie').textContent = 'Cargando…';
+
+  let d = estCache[ruta];
+  if(!d){
+    try{
+      const snap = await get(ref(db, ruta));
+      d = snap.exists() ? (snap.val() || {}) : {};
+      estCache[ruta] = d;
+    }catch(e){
+      document.getElementById('estPie').textContent =
+        'No se pudieron leer las estadísticas. Revisá la conexión.';
+      return;
+    }
+  }
+
+  const tot = d.tot || {}, ventas = d.ventas || {};
+  const consultas = (tot.busq || 0) + (tot.cod || 0);
+  const faltantes = (tot.nores || 0) + (tot.codx || 0);
+  document.getElementById('enBusq').textContent   = consultas.toLocaleString('es-AR');
+  document.getElementById('enFalta').textContent  = faltantes.toLocaleString('es-AR');
+  document.getElementById('enVentas').textContent = (ventas.n || 0).toLocaleString('es-AR');
+  document.getElementById('enMonto').textContent  = estMonto(ventas.monto || 0);
+
+  estPintar('estBusq', estTop(d.busq, 8).map(([k, v]) => ({ titulo:k, valor:v, etiqueta:v + '×' })),
+    'Todavía nadie buscó por nombre en este período.');
+
+  estPintar('estNores', estTop(d.nores, 8).map(([k, v]) => ({ titulo:k, valor:v, etiqueta:v + '×' })),
+    'Todo lo que pidieron por nombre estaba. Buena señal.');
+
+  // Escaneados y encontrados: se muestra el código arriba y el producto abajo
+  const cods = Object.entries(d.cod || {})
+    .filter(([, v]) => v && typeof v === 'object' && v.n)
+    .map(([k, v]) => ({ titulo:k, valor:v.n, etiqueta:v.n + '×', mono:true,
+                        sub: estNombreDeCodigo(k, v.d) }))
+    .sort((a, b) => b.valor - a.valor).slice(0, 8);
+  estPintar('estCod', cods, 'Todavía no se escaneó ningún producto en este período.');
+
+  estPintar('estCodx', estTop(d.codx, 8).map(([k, v]) => ({ titulo:k, valor:v, etiqueta:v + '×', mono:true })),
+    'Ningún código quedó sin encontrar. Las listas están completas.');
+
+  estPintar('estProv', estTop(d.prov, 8).map(([k, v]) => ({ titulo:k, valor:v, etiqueta:v + '×' })),
+    'Sin filtros de proveedor usados todavía.');
+
+  const vend = Object.entries(ventas.items || {})
+    .filter(([, v]) => v && typeof v === 'object')
+    .map(([k, v]) => ({ titulo:v.d || k, valor:v.m || 0, etiqueta:estMonto(v.m || 0),
+                        sub:(v.p || '') + (v.n > 1 ? ' · ' + v.n + ' veces' : '') }))
+    .sort((a, b) => b.valor - a.valor).slice(0, 8);
+  estPintar('estVend', vend, 'Todavía no se cobró ninguna venta en este período.');
+
+  estPintarDias(d.dias);
+
+  if(d.act){
+    const f = new Date(d.act);
+    document.getElementById('estPie').textContent = 'Última actividad registrada: ' +
+      f.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}) + ' ' +
+      f.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false}) +
+      ' · los datos se guardan 6 meses';
+  } else {
+    document.getElementById('estPie').textContent = 'Sin actividad registrada en este período.';
+  }
+}
+
+window.abrirEstadisticas = function(){
+  // Se manda lo que esté pendiente para que el panel muestre lo de recién
+  Stats.enviar();
+  estCache = {};
+  document.getElementById('estOverlay').style.display = 'flex';
+  setTimeout(() => verEstadisticas(estPeriodo.tipo, estPeriodo.atras), 250);
+};
+window.cerrarEstadisticas = function(){
+  document.getElementById('estOverlay').style.display = 'none';
+};
+window.verEstadisticas = verEstadisticas;
 </script>
 
 <script>
