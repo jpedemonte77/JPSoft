@@ -186,6 +186,18 @@ select:focus{border-color:rgba(0,0,0,0.3);background:#fff;box-shadow:0 0 0 3px r
     </div>
     <div class="cod-scroll"><div id="codLista"></div></div>
     <button class="btn btn-outline" onclick="cargarCodigos()" style="margin-top:1rem">Actualizar lista</button>
+
+    <div style="margin-top:1.6rem;padding-top:1.3rem;border-top:1px solid rgba(0,0,0,0.07)">
+      <div style="font-size:13px;font-weight:500;color:#111;margin-bottom:4px">Escribirlos en el libro maestro</div>
+      <div style="font-size:12px;color:#999;line-height:1.5;margin-bottom:12px">
+        Elegí tu archivo maestro. Se le escriben los códigos en la columna CODIGO
+        y se descarga una copia, conservando tipografía, anchos y todas las hojas.
+      </div>
+      <input type="file" id="expInput" accept=".xlsx" style="display:none"
+             onchange="if(this.files[0]){escribirCodigosEnMaestro(this.files[0]);this.value='';}">
+      <button class="btn" onclick="elegirMaestro()">Elegir el libro maestro</button>
+      <div class="status-box" id="expMsg" style="display:none"></div>
+    </div>
   </div>
 
   <!-- CONVERSOR -->
@@ -1382,6 +1394,141 @@ window.borrarCodigo = async function(clave){
   }catch(e){
     alert('No se pudo borrar: ' + e.message);
   }
+};
+
+// ══════════════════════════════════════════════════════════════════
+//  ESCRIBIR LOS CÓDIGOS EN EL LIBRO MAESTRO
+//  Toma TU archivo maestro, le escribe en la columna CODIGO los que se
+//  cargaron desde el gestor, y te lo devuelve. No genera un libro nuevo:
+//  respeta la tipografía, los anchos, los formatos y las hojas que la
+//  app ni siquiera conoce.
+//
+//  Hace falta una segunda librería (ExcelJS) porque la que usa el resto
+//  de esta página no sabe escribir estilos: convertiría todo a Calibri.
+//  Se carga sólo al apretar el botón.
+// ══════════════════════════════════════════════════════════════════
+const EXCELJS_CDN = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+
+function cargarExcelJS(){
+  if(window.ExcelJS) return Promise.resolve();
+  return new Promise((ok, err) => {
+    const s = document.createElement('script');
+    s.src = EXCELJS_CDN;
+    s.onload = () => ok();
+    s.onerror = () => err(new Error('No se pudo descargar la librería de Excel. ¿Hay internet?'));
+    document.head.appendChild(s);
+  });
+}
+
+function expNorm(t){
+  return String(t == null ? '' : t)
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+// La fila de encabezados es la que dice PRODUCTO; los datos arrancan en la siguiente
+function expFilaDatos(ws){
+  for(let r = 1; r <= 12; r++){
+    for(let c = 1; c <= 5; c++){
+      const v = ws.getRow(r).getCell(c).value;
+      if(String(v == null ? '' : v).trim().toUpperCase() === 'PRODUCTO') return r + 1;
+    }
+  }
+  return 6;
+}
+
+window.escribirCodigosEnMaestro = async function(archivo){
+  const caja = document.getElementById('expMsg');
+  caja.style.display = 'block';
+  caja.innerHTML = 'Leyendo los códigos cargados...';
+
+  let codigos;
+  try{
+    const snap = await get(ref(db, 'codigos'));
+    codigos = snap.exists() ? (snap.val() || {}) : {};
+  }catch(e){
+    caja.innerHTML = '<span class="badge-err">Error</span> No se pudieron leer los códigos: ' + e.message;
+    return;
+  }
+  const entradas = Object.values(codigos).filter(v => v && v.c && v.p && v.n);
+  if(!entradas.length){
+    caja.innerHTML = '<span class="badge-err">Nada que escribir</span> Todavía no se cargó ningún código a mano.';
+    return;
+  }
+
+  caja.innerHTML = 'Descargando la librería de Excel (una sola vez)...';
+  try{ await cargarExcelJS(); }
+  catch(e){ caja.innerHTML = '<span class="badge-err">Error</span> ' + e.message; return; }
+
+  caja.innerHTML = 'Abriendo tu libro maestro...';
+  const wb = new ExcelJS.Workbook();
+  try{
+    await wb.xlsx.load(await archivo.arrayBuffer());
+  }catch(e){
+    caja.innerHTML = '<span class="badge-err">Error</span> No se pudo abrir el archivo. ¿Es un .xlsx?';
+    return;
+  }
+
+  // Índice: hoja → nombre de producto normalizado → número de fila
+  const indice = {};
+  wb.eachSheet(ws => {
+    const filas = {}, desde = expFilaDatos(ws);
+    for(let r = desde; r <= ws.rowCount; r++){
+      const nom = expNorm(ws.getRow(r).getCell(3).value);
+      if(nom && !(nom in filas)) filas[nom] = r;
+    }
+    indice[expNorm(ws.name)] = { ws, filas };
+  });
+
+  let escritos = 0, pisados = 0;
+  const sinUbicar = [];
+  for(const e of entradas){
+    const hoja = indice[expNorm(e.p)];
+    if(!hoja){ sinUbicar.push(e.n + ' — no existe la hoja ' + e.p); continue; }
+    const fila = hoja.filas[expNorm(e.n)];
+    if(!fila){ sinUbicar.push(e.n + ' (' + e.p + ')'); continue; }
+
+    const celda = hoja.ws.getRow(fila).getCell(2);
+    const anterior = celda.value == null ? '' : String(celda.value).trim();
+    if(anterior === String(e.c)) continue;          // ya estaba igual
+    if(anterior) pisados++;
+
+    // El estilo se copia de la celda del nombre, que siempre tiene formato
+    const modelo = hoja.ws.getRow(fila).getCell(3);
+    celda.value = String(e.c);
+    if(modelo.font)      celda.font = Object.assign({}, modelo.font);
+    if(modelo.alignment) celda.alignment = Object.assign({}, modelo.alignment);
+    celda.numFmt = '@';                              // texto: no se come el cero inicial
+    escritos++;
+  }
+
+  const datos = await wb.xlsx.writeBuffer();
+  const url = URL.createObjectURL(new Blob([datos],
+    {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+  const a = document.createElement('a');
+  const punto = archivo.name.lastIndexOf('.');
+  a.href = url;
+  a.download = (punto > 0 ? archivo.name.slice(0, punto) : archivo.name) + ' (con códigos).xlsx';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+
+  let html = '<span class="badge-ok">Listo</span> ' + escritos + ' código' +
+             (escritos === 1 ? '' : 's') + ' escrito' + (escritos === 1 ? '' : 's') +
+             ' sobre ' + entradas.length + ' cargado' + (entradas.length === 1 ? '' : 's') + '.';
+  if(pisados) html += '<br>' + pisados + ' reemplazaron un código que ya estaba en el maestro.';
+  if(sinUbicar.length){
+    html += '<br><br><strong>No se pudieron ubicar ' + sinUbicar.length + ':</strong><br>' +
+      sinUbicar.slice(0, 12).map(x => '· ' + codEsc(x)).join('<br>') +
+      (sinUbicar.length > 12 ? '<br>· y ' + (sinUbicar.length - 12) + ' más' : '') +
+      '<br><span style="color:#999">Suele pasar cuando el proveedor le cambió el nombre al producto.</span>';
+  }
+  html += '<br><br>Guardá el archivo descargado en lugar del tuyo y corré los scrapers: ' +
+          'de ahí en adelante los códigos se conservan solos.';
+  caja.innerHTML = html;
+};
+
+window.elegirMaestro = function(){
+  document.getElementById('expInput').click();
 };
 </script>
 </body>
